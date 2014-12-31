@@ -9,10 +9,24 @@
 
   watcherCount = 0
 
-  # Polyfills if needed
+  ## Polyfills and other old browser support
+
+  # Check if the object is an HTML element. From
+  # http://stackoverflow.com/questions/384286/javascript-isdom-how-do-you-check-if-a-javascript-object-is-a-dom-object
+  isElement = (object) ->
+    if typeof HTMLElement is 'object' # DOM2
+      object instanceof HTMLElement
+    else # Older browsers.
+      object && typeof(object) is 'object' && object isnt null && object.nodeType is 1 && typeof object.nodeName is 'string'
+
+  # Equivalent to $("[#{attribute}]", scope)
   elementsWithAttribute = (attribute, scope = document) ->
+    unless isElement(scope) || scope.nodeType == 9 # 9 is the document node
+      return []
+
     if scope.querySelectorAll?
       scope.querySelectorAll "[#{attribute}]"
+
     else # IE < 8
       # http://stackoverflow.com/questions/9496427/can-i-get-elements-by-attribute-selector-when-queryselectorall-is-not-available
       el for el in scope.getElementsByTagName('*') when el.getAttribute(attribute)?

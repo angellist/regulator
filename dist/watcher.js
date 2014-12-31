@@ -10,12 +10,22 @@
       return root.Watcher = factory();
     }
   })(this, function() {
-    var Watcher, elementsWithAttribute, hasAttribute, watcherCount;
+    var Watcher, elementsWithAttribute, hasAttribute, isElement, watcherCount;
     watcherCount = 0;
+    isElement = function(object) {
+      if (typeof HTMLElement === 'object') {
+        return object instanceof HTMLElement;
+      } else {
+        return object && typeof object === 'object' && object !== null && object.nodeType === 1 && typeof object.nodeName === 'string';
+      }
+    };
     elementsWithAttribute = function(attribute, scope) {
       var el, _i, _len, _ref, _results;
       if (scope == null) {
         scope = document;
+      }
+      if (!(isElement(scope) || scope.nodeType === 9)) {
+        return [];
       }
       if (scope.querySelectorAll != null) {
         return scope.querySelectorAll("[" + attribute + "]");

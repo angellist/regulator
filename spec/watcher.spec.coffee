@@ -67,7 +67,7 @@ define [
     describe '#initialize', ->
       class SynchronousWatcher extends Watcher
         constructor: (options = {})->
-          super(@initializer, options)
+          super ((name) => @initializer(name)), options
           @allowedNames = ['empty', 'full', 'nested-inner', 'nested-outer']
           @invocationCounts = {}
 
@@ -252,6 +252,23 @@ define [
 
         fixture.set deadFixture
 
+      it 'does not scan the DOM when text nodes are added', (done) ->
+        oldHandleMutation = @watcher._handleMutation
+        spyOn(@watcher, '_throttledScan')
+
+        watcher = @watcher
+        spyOn(@watcher, '_handleMutation').and.callFake (args...) ->
+          oldHandleMutation.apply this, args
+
+          expect(watcher.scan.calls.count()).toBe 0
+          expect(watcher._throttledScan.calls.count()).toBe 0
+
+          done()
+
+        @watcher.observe()
+        @watcher.scan.calls.reset()
+
+        fixture.el.innerHTML = 'Text node'
       afterEach ->
         @watcher.disconnect()
 
