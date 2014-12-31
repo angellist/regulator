@@ -1,12 +1,11 @@
 watcher
 =======
+[![Build Status](https://travis-ci.org/venturehacks/watcher.svg?branch=master)](https://travis-ci.org/venturehacks/watcher)
 
-Watcher is a tiny opinionless Javascript framework.
+Watcher is a tiny opinionless Javascript framework. It weighs about 1.2KB (compressed).
 
-It weighs about 1.2KB (compressed).
-
-It currently requires `Promise` and `MutationObserver`, which are available natively on modern browsers, or via polyfill
-on older ones.
+It currently requires `Promise` and `MutationObserver`, which are available natively on modern browsers, or via 
+polyfill on older ones.
 
 Usage
 -----
