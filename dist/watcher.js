@@ -39,7 +39,7 @@
       }
     };
     return Watcher = (function() {
-      function Watcher(options) {
+      function Watcher(getInitializer, options) {
         var k, v;
         if (options == null) {
           options = {};
@@ -63,6 +63,7 @@
         }
         this._instanceId = watcherCount++;
         this._initializers = {};
+        this._getInitializer = getInitializer;
         if (this._options.promiseShim == null) {
           throw new Error('Promise is not defined. Provide a shim if you need to support older browsers.');
         }
@@ -76,7 +77,7 @@
         el._watcherControllers || (el._watcherControllers = {});
         if (el._watcherControllers[this._instanceId] == null) {
           name = el.getAttribute(this._options.attribute);
-          (_base = this._initializers)[name] || (_base[name] = this.initializer(name));
+          (_base = this._initializers)[name] || (_base[name] = this._getInitializer(name));
           promise = this._options.promiseShim.resolve(this._initializers[name]).then(function(initializer) {
             return initializer(el);
           });
@@ -89,13 +90,6 @@
           el._watcherControllers[this._instanceId] = promise;
         }
         return el._watcherControllers[this._instanceId];
-      };
-
-      Watcher.prototype.initializer = function(name) {
-        if (typeof this._options.initializer !== 'function') {
-          throw new Error('Must set options.initializer or override the initializer method');
-        }
-        return this._options.initializer(name);
       };
 
       Watcher.prototype.scan = function() {
@@ -117,6 +111,7 @@
           throw new Error('MutationObserver is not defined. Provide a shim if you need to support older browsers');
         }
         if (this._observer == null) {
+          this.scan();
           this._observer = new this._options.mutationObserverShim(this._handleMutation);
           this._observer.observe(document.getElementsByTagName('body')[0], {
             childList: true,
@@ -135,7 +130,9 @@
       };
 
       Watcher.prototype.onError = function(error, name, el) {
-        throw error;
+        return setTimeout((function() {
+          throw error;
+        }), 0);
       };
 
       Watcher.prototype._handleMutation = function(records) {
