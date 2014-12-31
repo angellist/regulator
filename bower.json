@@ -13,6 +13,6 @@
   "license": "MIT",
   "ignore": [
     "**/.*",
-    "spec",
+    "spec"
   ]
 }
