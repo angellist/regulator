@@ -1,0 +1,18 @@
+{
+  "name": "watcher",
+  "version": "0.5.0",
+  "authors": [
+    "Kevin Montag <k2@angel.co>"
+  ],
+  "description": "Dead simple Javascript initialization",
+  "main": "dist/watcher.js",
+  "moduleType": [
+    "amd",
+    "globals"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "spec",
+  ]
+}
