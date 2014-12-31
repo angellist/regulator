@@ -4,7 +4,7 @@
   "authors": [
     "Kevin Montag <k2@angel.co>"
   ],
-  "description": "Dead simple Javascript initialization",
+  "description": "A tiny opinionless Javascript framework",
   "main": "dist/watcher.js",
   "moduleType": [
     "amd",

@@ -1,7 +1,12 @@
 watcher
 =======
 
-A tiny opinionless Javascript framework.
+Watcher is a tiny opinionless Javascript framework.
+
+It weighs about 1.2KB (compressed).
+
+It currently requires `Promise` and `MutationObserver`, which are available natively on modern browsers, or via polyfill
+on older ones.
 
 Usage
 -----
@@ -19,7 +24,7 @@ Create a `Watcher` instance and tell it how to initialize your blocks:
 
 ```
 var Initializers = {
-  // This function will be invoked once with each element whose `data-watcher-name` is "toggle"
+  // This function will be invoked once with each element whose data-watcher-name is "toggle"
   toggle: function(el) {
     $(el).on('click', 'a.visible', function() {
       var hidden = $(el).find('.hidden');
@@ -38,8 +43,7 @@ var watcher = new Watcher({initializer: initializer});
 watcher.observe();
 ```
 
-Whenever you add another block with `data-watcher-name="toggle"` to the DOM, 
-it will be automatically initialized:
+Now whenever you add another block with `data-watcher-name="toggle"` to the DOM, it will be automatically initialized:
 
 ```
 var content = $.get(someUrl); // Contains a "toggle" block

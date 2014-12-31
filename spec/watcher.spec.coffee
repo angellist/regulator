@@ -208,6 +208,11 @@ define [
     describe '#observe', ->
       beforeEach ->
         @watcher = new Watcher
+        spyOn(@watcher, 'scan')
+
+      it 'invokes scan once immediately', ->
+        @watcher.observe()
+        expect(@watcher.scan.calls.count()).toBe 1
 
       it 'scans the DOM (throttled) when new root elements with data-watcher-name are added', (done) ->
         fixtureAdded = false
@@ -232,18 +237,18 @@ define [
         expect(typeof oldHandleMutation).toBe 'function' # Sanity
 
         spyOn(@watcher, '_throttledScan')
-        spyOn(@watcher, 'scan') # Paranoia
 
         watcher = @watcher
         spyOn(@watcher, '_handleMutation').and.callFake (args...) ->
           oldHandleMutation.apply this, args
 
-          expect(watcher.scan.calls.count()).toBe 0
+          expect(watcher.scan.calls.count()).toBe 0 # Paranoia
           expect(watcher._throttledScan.calls.count()).toBe 0
 
           done()
 
         @watcher.observe()
+        @watcher.scan.calls.reset()
 
         fixture.set deadFixture
 

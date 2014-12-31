@@ -1,9 +1,10 @@
 {
   "name": "watcher",
   "version": "0.5.0",
-  "description": "Dead simple automatic Javascript initialization",
-  "main": "lib/watcher.js",
+  "description": "A tiny opinionless Javascript framework",
+  "main": "dist/watcher.js",
   "scripts": {
+    "build": "./node_modules/.bin/coffee -c -o dist/ src/",
     "test": "./node_modules/karma/bin/karma start --single-run"
   },
   "repository": {

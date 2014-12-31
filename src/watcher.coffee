@@ -29,8 +29,8 @@
       @_options =
         attribute:            'data-watcher-name' # Set this attribute to denote an initializable block in the DOM
         throttle:             200                 # Minimum time to wait between successive DOM scans
-        promiseShim:          Promise             # Override to replace the promise implementation
-        mutationObserverShim: MutationObserver
+        promiseShim:          Promise             # Override to replace the Promise implementation
+        mutationObserverShim: MutationObserver    # Override to replace the MutationObserver implementation
       @_options[k] = v for own k, v of options
       @_instanceId = watcherCount++
       @_initializers = {}
@@ -83,6 +83,7 @@
       unless @_options.mutationObserverShim?
         throw new Error('MutationObserver is not defined. Provide a shim if you need to support older browsers')
       unless @_observer?
+        @scan() # Scan once right away.
         @_observer = new @_options.mutationObserverShim @_handleMutation
         @_observer.observe document.getElementsByTagName('body')[0] , childList: true, subtree: true
       this
