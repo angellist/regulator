@@ -16,7 +16,6 @@ module.exports = (config) ->
     # list of files / patterns to load in the browser
     files: [
       'spec/test-main.coffee'
-      {pattern: 'node_modules/es6-promise/dist/es6-promise.js', included: false}
       {pattern: 'src/**/*.coffee', included: false}
       {pattern: 'spec/**/*.spec.coffee', included: false}
     ]
@@ -64,7 +63,7 @@ module.exports = (config) ->
 
     # start these browsers
     # available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['PhantomJS']
+    browsers: ['Firefox']
 
 
     # Continuous Integration mode
