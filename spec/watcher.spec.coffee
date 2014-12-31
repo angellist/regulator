@@ -57,7 +57,7 @@ define [
         fixtures = fixture.set '<div data-other-thing="name">content</div>'
         expect(fixtures.length).toBe 1 # Sanity
 
-        @watcher = new Watcher attribute: 'data-other-thing'
+        @watcher = new Watcher (->), attribute: 'data-other-thing'
         spyOn @watcher, 'initialize'
         @watcher.scan()
 
@@ -66,8 +66,8 @@ define [
 
     describe '#initialize', ->
       class SynchronousWatcher extends Watcher
-        constructor: ->
-          super
+        constructor: (options = {})->
+          super(@initializer, options)
           @allowedNames = ['empty', 'full', 'nested-inner', 'nested-outer']
           @invocationCounts = {}
 
@@ -275,7 +275,7 @@ define [
     describe '#_throttledScan', ->
       beforeEach ->
         jasmine.clock().install()
-        @watcher = new Watcher throttle: 100
+        @watcher = new Watcher (->), throttle: 100
         spyOn(@watcher, 'scan')
 
       it 'invokes scan immediately when called once', ->

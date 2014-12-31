@@ -1,8 +1,8 @@
 watcher
 =======
-[![Build Status](https://travis-ci.org/venturehacks/watcher.svg?branch=master)](https://travis-ci.org/venturehacks/watcher)
+[![Build Status](https://travis-ci.org/venturehacks/watcher.svg)](https://travis-ci.org/venturehacks/watcher)
 
-Watcher is a tiny opinionless Javascript framework. It weighs about 1.2KB (compressed).
+Watcher is a tiny opinionless Javascript initialization framework. It weighs about 1.2KB (compressed).
 
 It currently requires `Promise` and `MutationObserver`, which are available natively on modern browsers, or via 
 polyfill on older ones.
@@ -37,14 +37,34 @@ var Initializers = {
   }
 };
 
-var initializer = function(name) { Initializers[name]; };
-var watcher = new Watcher({initializer: initializer});
-watcher.observe();
+new Watcher(function(name) {
+  // Tell the watcher how to find an initialization function for blocks with the given name.
+  return Initializers[name];
+}).observe();
 ```
 
-Now whenever you add another block with `data-watcher-name="toggle"` to the DOM, it will be automatically initialized:
+Now whenever you add another element with `data-watcher-name="toggle"` to the DOM, it will be automatically initialized:
 
 ```
 var content = $.get(someUrl); // Contains a "toggle" block
 $('body').append(content); // "toggle" block is initialized automatically
 ```
+
+Motivation
+----------
+
+The world is filled with excellent Javascript frameworks, many of them full-featured and highly structured. Watcher is
+extremely minimal, simply managing structured initialization of your components and allowing them to communicate with
+each other. Perfect for loosely coupled applications at any scale, or applications that prefer to define their own
+structure and toolkit.
+
+- **Automatic, tightly scoped initialization**
+
+  Associate HTML elements directly with their Javascript behaviors, regardless of when or where they were added to the
+  DOM. Easily isolate the initialization of components on the page.
+
+- **Clean communication between components**
+
+  Expose controllers for the logical pieces of your interface, and easily give them access to one another. Controllers
+  can be built asynchronously, and can be anything from plain objects to Backbone views to Ember controllers.
+

@@ -25,7 +25,7 @@
       typeof el[attribute] isnt 'undefined'
 
   class Watcher
-    constructor: (options = {}) ->
+    constructor: (getInitializer, options = {}) ->
       @_options =
         attribute:            'data-watcher-name' # Set this attribute to denote an initializable block in the DOM
         throttle:             200                 # Minimum time to wait between successive DOM scans
@@ -34,6 +34,7 @@
       @_options[k] = v for own k, v of options
       @_instanceId = watcherCount++
       @_initializers = {}
+      @_getInitializer = getInitializer
 
       unless @_options.promiseShim?
         throw new Error('Promise is not defined. Provide a shim if you need to support older browsers.')
@@ -52,9 +53,7 @@
       unless el._watcherControllers[@_instanceId]?
         name = el.getAttribute @_options.attribute
 
-        @_initializers[name] ||= @initializer(name)
-
-        #@_options.promiseShim.resolve(@_initializers[name]).then((initializer) -> throw new Error('here') ; initializer(el)).catch -> console.log('here')
+        @_initializers[name] ||= @_getInitializer(name)
 
         promise = @_options.promiseShim.resolve(@_initializers[name]).then (initializer) -> initializer(el)
         el._watcherControllers[@_instanceId] = promise
@@ -63,15 +62,6 @@
         el._watcherControllers[@_instanceId] = promise
 
       el._watcherControllers[@_instanceId]
-
-    # Retrieve a function to initialize DOM blocks with the given name. When a block with name "foo" is added to the
-    # DOM, initializer("foo") will be called with that block's root as the only argument. By default, delegates to the
-    # "initializer" option that was passed in at construction. Subclasses may also simply override this function.
-    # May return a promise resolving to the initializer, instead of the initializer itself.
-    initializer: (name) ->
-      unless typeof @_options.initializer is 'function'
-        throw new Error('Must set options.initializer or override the initializer method')
-      @_options.initializer(name)
 
     # Scan the DOM immediately, and initialize any uninitialized blocks. Returns a promise that resolves when all
     # blocks currently in the DOM have been initialized.
@@ -92,7 +82,9 @@
       @_observer?.disconnect()
       @_observer = null
 
-    onError: (error, name, el) -> throw error
+    onError: (error, name, el) ->
+      # Break out of the promise context
+      setTimeout (-> throw error), 0
 
     ## Protected methods - probably no need to change these.
 
@@ -107,7 +99,7 @@
               broken = true
               break
 
-    # Adapted from Underscore's `_.throttle`.
+    # Adapted from Underscore's _.throttle.
     _throttledScan: =>
       # Use an inner function so that successive calls are properly tracked without having to assign a ton of instance
       # variables to the watcher. This is roughly equivalent to
