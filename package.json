@@ -5,6 +5,9 @@
   "main": "dist/watcher.js",
   "scripts": {
     "build": "./node_modules/.bin/coffee -c -o dist/ src/",
+    "preupdate": "npm run build",
+    "postcommit": "git push && git push --tags && npm publish",
+    "release": "./node_modules/.bin/mversion",
     "test": "./node_modules/karma/bin/karma start --single-run"
   },
   "repository": {
@@ -27,6 +30,7 @@
     "karma-jasmine": "^0.3.3",
     "karma-phantomjs-launcher": "^0.1.4",
     "karma-requirejs": "^0.2.2",
+    "mversion": "^1.9.0",
     "requirejs": "^2.1.15"
   }
 }
