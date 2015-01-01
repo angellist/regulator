@@ -6,7 +6,7 @@
   "scripts": {
     "build": "./node_modules/.bin/coffee -c -o dist/ src/",
     "preupdate": "npm run build",
-    "postcommit": "git push && git push --tags && npm publish",
+    "postupdate": "git push && git push --tags",
     "release": "./node_modules/.bin/mversion",
     "test": "./node_modules/karma/bin/karma start --single-run"
   },
