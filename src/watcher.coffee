@@ -39,20 +39,45 @@
       typeof el[attribute] isnt 'undefined'
 
   class Watcher
-    constructor: (getInitializer, options = {}) ->
+    ###*
+    # An initialization function for your components. Components are marked by the presence of a `data-wt` attribute
+    # (or whatever attribute you've configured for your `Watcher` instance), and their name is the value of this
+    # attribute.
+    #
+    # You're encouraged to structure your application such that the name uniquely describes how to initialize the
+    # component.
+    #
+    # @example
+    #   new Watcher(function (name, el) {
+    #     initializer = require('components/' + name);
+    #     return initializer(el);
+    #   }).observe();
+    #   // Adding `<div data-wt='foo' />` to the DOM would cause this function to be invoked with name 'foo'.
+    #
+    # @callback initializeCallback
+    # @param {string} name - The name of the component being initialized, i.e. the value of the data-wt attribute
+    # @param {Element} el - The root element of the component being initialized, i.e. the element with a data-wt
+    #   attribute
+    # @return {Promise|} A controller object for this component, or a promise resolving with that object
+    ###
+
+    ###*
+    # @param {initializeCallback} initialize - The function to initialize your components
+    ###
+    constructor: (initialize, options = {}) ->
       @_options =
-        attribute:            'data-watcher-name' # Set this attribute to denote an initializable block in the DOM
-        throttle:             200                 # Minimum time to wait between successive DOM scans
-        promiseShim:          Promise             # Override to replace the Promise implementation
-        mutationObserverShim: MutationObserver    # Override to replace the MutationObserver implementation
+        teardown:         null             # Receives the controller returned (or resolved) by `initialize`
+        attribute:        'data-wt'        # Set this attribute to denote an initializable block in the DOM
+        throttle:         200              # Minimum time to wait between successive DOM scans when observing
+        Promise:          Promise          # Override to replace the Promise implementation
+        MutationObserver: MutationObserver # Override to replace the MutationObserver implementation
       @_options[k] = v for own k, v of options
       @_instanceId = watcherCount++
       @_initializers = {}
-      @_getInitializer = getInitializer
+      @_initialize = initialize
 
-      unless @_options.promiseShim?
+      unless @_options.Promise?
         throw new Error('Promise is not defined. Provide a shim if you need to support older browsers.')
-
 
     # Initialize the element (if it hasn't been initialized already) and return a promise resolving to the element's
     # controller (e.g. the return value of its initialization function).
@@ -66,14 +91,8 @@
       # Store the controller for this instance and return it.
       unless el._watcherControllers[@_instanceId]?
         name = el.getAttribute @_options.attribute
-
-        @_initializers[name] ||= @_getInitializer(name)
-
-        promise = @_options.promiseShim.resolve(@_initializers[name]).then (initializer) -> initializer(el)
-        el._watcherControllers[@_instanceId] = promise
-        promise.catch (error) => @onError(error, name, el)
-
-        el._watcherControllers[@_instanceId] = promise
+        el._watcherControllers[@_instanceId] = new @_options.Promise (resolve) =>
+          resolve @_initialize(name, el)
 
       el._watcherControllers[@_instanceId]
 
@@ -81,24 +100,20 @@
     # blocks currently in the DOM have been initialized.
     scan: =>
       # Initialize all elements, no-op if they've already been initialized
-      @_options.promiseShim.all (@initialize(el) for el in elementsWithAttribute(@_options.attribute))
+      @_options.Promise.all (@initialize(el) for el in elementsWithAttribute(@_options.attribute))
 
     observe: =>
-      unless @_options.mutationObserverShim?
+      unless @_options.MutationObserver?
         throw new Error('MutationObserver is not defined. Provide a shim if you need to support older browsers')
       unless @_observer?
         @scan() # Scan once right away.
-        @_observer = new @_options.mutationObserverShim @_handleMutation
+        @_observer = new @_options.MutationObserver @_handleMutation
         @_observer.observe document.getElementsByTagName('body')[0] , childList: true, subtree: true
       this
 
     disconnect: =>
       @_observer?.disconnect()
       @_observer = null
-
-    onError: (error, name, el) ->
-      # Break out of the promise context
-      setTimeout (-> throw error), 0
 
     ## Protected methods - probably no need to change these.
 

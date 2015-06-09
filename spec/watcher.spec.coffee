@@ -1,23 +1,23 @@
 define [
   'src/watcher'
 ], (Watcher) ->
-  emptyFixture = '<div data-watcher-name="empty"></div>'
+  emptyFixture = '<div data-wt="empty"></div>'
   fullFixture = """
-<div data-watcher-name="full">
+<div data-wt="full">
   <span>Test content</span>
 </div>
 """
 
   nestedFixture = """
 <div>
-  <div data-watcher-name="nested">Content</div>
+  <div data-wt="nested">Content</div>
 </div>
 """
 
   doubleNestedFixture = """
-<span id="nested-outer" data-watcher-name="nested-outer">
+<span id="nested-outer" data-wt="nested-outer">
   <div>Outer content</div>
-  <strong id="nested-inner" data-watcher-name="nested-inner">
+  <strong id="nested-inner" data-wt="nested-inner">
     <span>Nested content</span>
   </strong>
 </span>
@@ -30,7 +30,7 @@ define [
         @watcher = new Watcher
         spyOn(@watcher, 'initialize')
 
-      it 'initializes all elements with data-watcher-name set', ->
+      it 'initializes all elements with data-wt set', ->
         fixtures = fixture.set emptyFixture, fullFixture, fullFixture
         @watcher.scan()
         expect(@watcher.initialize.calls.count()).toBe 3
@@ -67,7 +67,7 @@ define [
     describe '#initialize', ->
       class SynchronousWatcher extends Watcher
         constructor: (options = {})->
-          super ((name) => @initializer(name)), options
+          super @initializer, options
           @allowedNames = ['empty', 'full', 'nested-inner', 'nested-outer']
           @invocationCounts = {}
 
@@ -80,31 +80,30 @@ define [
           # Allow testing errors
           @throwErrorDuringInitialization = false
 
-        initializer: (name) =>
+        initializer: (name, el) =>
           throw new Error("Unexpected root: #{name}") unless name in @allowedNames
 
-          (el) =>
-            @invocationCounts[name] ||= 0
-            @invocationCounts[name]++
-            el.className = name
+          @invocationCounts[name] ||= 0
+          @invocationCounts[name]++
+          el.className = name
 
-            # If appropriate...
-            throwError = => throw new Error('Test error') if @throwErrorDuringInitialization
-            ret = name: name
+          # If appropriate...
+          throwError = => throw new Error('Test error') if @throwErrorDuringInitialization
+          ret = name: name
 
-            # Return a promise that resolves with the return value
-            if @asyncInitialization
-              new Promise (resolve) =>
-                throwError()
-                setTimeout =>
-                  # Track this so we can use it to sanity check that the initialization was actually asynchronous
-                  @asyncInitializationInvoked = true
-                  resolve ret
-                , 5
-            # Return a value inline
-            else
+          # Return a promise that resolves with the return value
+          if @asyncInitialization
+            new Promise (resolve) =>
               throwError()
-              ret
+              setTimeout =>
+                # Track this so we can use it to sanity check that the initialization was actually asynchronous
+                @asyncInitializationInvoked = true
+                resolve ret
+              , 5
+          # Return a value inline
+          else
+            throwError()
+            ret
 
       class AsynchronousWatcher extends SynchronousWatcher
         initializer: (name) ->
@@ -161,16 +160,7 @@ define [
           beforeEach ->
             @watcher.throwErrorDuringInitialization = true
 
-          it 'passes initialization errors to onError', (done) ->
-            spyOn(@watcher, 'onError').and.callFake (error, name, el) =>
-              expect(error.message).toBe 'Test error'
-              expect(name).toBe 'full'
-              expect(el).toBe @el
-              done()
-            @watcher.initialize @el
-
           it 'allows initialization errors to be caught directly', (done) ->
-            @watcher.onError = ->
             @watcher.initialize(@el).catch (error) =>
               expect(error.message).toBe 'Test error'
               done()
@@ -214,7 +204,7 @@ define [
         @watcher.observe()
         expect(@watcher.scan.calls.count()).toBe 1
 
-      it 'scans the DOM (throttled) when new root elements with data-watcher-name are added', (done) ->
+      it 'scans the DOM (throttled) when new root elements with data-wt are added', (done) ->
         fixtureAdded = false
 
         spyOn(@watcher, '_throttledScan').and.callFake -> expect(fixtureAdded).toBe true ; done()
@@ -223,7 +213,7 @@ define [
         fixture.set fullFixture
         fixtureAdded = true
 
-      it 'scans the DOM (throttled) when new nested elements with data-watcher-name are added', (done) ->
+      it 'scans the DOM (throttled) when new nested elements with data-wt are added', (done) ->
         fixtureAdded = false
 
         spyOn(@watcher, '_throttledScan').and.callFake -> expect(fixtureAdded).toBe true ; done()
