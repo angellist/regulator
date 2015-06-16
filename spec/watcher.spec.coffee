@@ -165,7 +165,7 @@ define [
               expect(error.message).toBe 'Test error'
               done()
 
-        describe 'when the initializer returns a synchronous value', (done) ->
+        describe 'when the initializer returns a synchronous value', ->
           it 'returns a promise which resolves to the initializer\'s synchronous return value', (done) ->
             @watcher.initialize(@el).then (resolvedValue) ->
               expect(resolvedValue).toEqual name: 'full'
@@ -173,7 +173,7 @@ define [
 
           describe '(shared error examples)', sharedErrorExamples
 
-        describe 'when the initializer returns an asynchronous value', (done)->
+        describe 'when the initializer returns an asynchronous value', ->
           beforeEach ->
             @watcher.asyncInitialization = true
 

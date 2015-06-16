@@ -2,31 +2,31 @@ watcher
 =======
 [![Build Status](https://travis-ci.org/venturehacks/watcher.svg)](https://travis-ci.org/venturehacks/watcher)
 
-Watcher is a tiny opinionless Javascript application framework. It weighs about 1.2KB (compressed).
+Watcher is a tiny opinionless Javascript framework. It aims to keep you sane at any application scale.
 
-It requires a [Promises/A+](https://promisesaplus.com/) implementation. It also optionally makes use of
-`MutationObserver` for reacting to changes in the DOM.
+Watcher weighs about 1.2KB (compressed). It requires a [Promises/A+](https://promisesaplus.com/) implementation.
+It also optionally makes use of `MutationObserver` for reacting to changes in the DOM.
 
 Motivation
 ----------
 
 The world is filled with excellent Javascript frameworks, many of them full-featured and highly structured. Watcher is
 extremely minimal, simply managing structured initialization of your components and allowing them to communicate with
-each other. Perfect for loosely coupled applications at any scale, or applications that prefer to define their own
-structure and toolkit.
+each other. Perfect for loosely coupled applications at any scale, using any toolkit.
 
 - **Automatic, tightly scoped initialization**
 
   Associate HTML elements directly with their Javascript behaviors, regardless of when or where they were added to the
-  DOM. Easily isolate the initialization of components on the page.
+  DOM. Automatically run initialization on server- and client-rendered content, without the need for context-specific
+  setup.
 
 - **Clean communication between components**
 
   Expose controllers for the logical pieces of your interface, and easily give them access to one another. Controllers
   can be built asynchronously, and can be anything from plain objects to Backbone views to Ember controllers.
 
-Usage
------
+Basic Usage
+-----------
 
 Denote components on your page with `data-wt`, and give them a name that describes how to initialize them:
 
