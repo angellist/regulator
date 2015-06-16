@@ -55,16 +55,20 @@
     #   // Adding `<div data-wt='foo' />` to the DOM would cause this function to be invoked with name 'foo'.
     #
     # @callback initializeCallback
-    # @param {string} name - The name of the component being initialized, i.e. the value of the data-wt attribute
+    # @param {string} name - The name of the component being initialized, i.e. the value of the data-wt attribute.
     # @param {Element} el - The root element of the component being initialized, i.e. the element with a data-wt
-    #   attribute
-    # @return {Promise|} A controller object for this component, or a promise resolving with that object
+    #   attribute.
+    # @return {Promise|object} A controller object for this component, or a promise resolving with that object. This
+    #   controller will be returned (as a promise) from the `initialize` method on your watcher instance, and passed
+    #   to the teardown callback that you specify.
     ###
 
     ###*
     # @param {initializeCallback} initialize - The function to initialize your components
     ###
     constructor: (initialize, options = {}) ->
+      unless typeof(initialize) == 'function'
+        throw new TypeError('invalid initialization function')
       @_options =
         teardown:         null             # Receives the controller returned (or resolved) by `initialize`
         attribute:        'data-wt'        # Set this attribute to denote an initializable block in the DOM
@@ -77,7 +81,7 @@
       @_initialize = initialize
 
       unless @_options.Promise?
-        throw new Error('Promise is not defined. Provide a shim if you need to support older browsers.')
+        throw new Error('options.Promise is not defined')
 
     # Initialize the element (if it hasn't been initialized already) and return a promise resolving to the element's
     # controller (e.g. the return value of its initialization function).
@@ -104,60 +108,52 @@
 
     observe: =>
       unless @_options.MutationObserver?
-        throw new Error('MutationObserver is not defined. Provide a shim if you need to support older browsers')
+        throw new Error('options.MutationObserver is not defined')
       unless @_observer?
         @scan() # Scan once right away.
-        @_observer = new @_options.MutationObserver @_handleMutation
+
+        # Adapted from Underscore's _.throttle
+        throttledScan = ((func, wait) =>
+          _now = -> new Date().getTime()
+          timeout = null
+          previous = 0
+
+          later = =>
+            previous = _now()
+            timeout = null
+            func()
+
+          =>
+            now = _now()
+            remaining = wait - (now - previous)
+            if remaining <= 0 || remaining > wait
+
+              # In case we're still waiting on a setTimeout call
+              clearTimeout timeout
+              timeout = null
+
+              previous = now
+              func()
+            else
+              unless timeout
+                timeout = setTimeout later, remaining
+
+        )((=> @scan()), @_options.throttle)
+
+        handleMutation = (records) =>
+          broken = false # Bail as early as possible
+          for record in records
+            unless broken
+              for addedNode in record.addedNodes
+                if hasAttribute(addedNode, @_options.attribute) || elementsWithAttribute(@_options.attribute, addedNode).length > 0
+                  throttledScan()
+                  broken = true
+                  break
+
+        @_observer = new @_options.MutationObserver handleMutation
         @_observer.observe document.getElementsByTagName('body')[0] , childList: true, subtree: true
       this
 
     disconnect: =>
       @_observer?.disconnect()
       @_observer = null
-
-    ## Protected methods - probably no need to change these.
-
-    # When the MutationObserver set up by "observe" is triggered
-    _handleMutation: (records) =>
-      broken = false # Bail as early as possible
-      for record in records
-        unless broken
-          for addedNode in record.addedNodes
-            if hasAttribute(addedNode, @_options.attribute) || elementsWithAttribute(@_options.attribute, addedNode).length > 0
-              @_throttledScan()
-              broken = true
-              break
-
-    # Adapted from Underscore's _.throttle.
-    _throttledScan: =>
-      # Use an inner function so that successive calls are properly tracked without having to assign a ton of instance
-      # variables to the watcher. This is roughly equivalent to
-      # `@_throttledScanFn ||= _.throttle(@scan, @_options.throttle)`
-      @_throttledScanFn ||= ((func, wait) =>
-        _now = Date.now || -> new Date().getTime()
-        timeout = null
-        previous = 0
-
-        later = =>
-          previous = _now()
-          timeout = null
-          func()
-
-        =>
-          now = _now()
-          remaining = wait - (now - previous)
-          if remaining <= 0 || remaining > wait
-
-            # In case we're still waiting on a setTimeout call
-            clearTimeout timeout
-            timeout = null
-
-            previous = now
-            func()
-          else
-            unless timeout
-              timeout = setTimeout later, remaining
-      )(@scan, @_options.throttle)
-
-      @_throttledScanFn()
-      this

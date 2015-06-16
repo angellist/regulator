@@ -22,7 +22,7 @@
   "homepage": "https://github.com/venturehacks/watchers.js",
   "devDependencies": {
     "coffee-script": "^1.8.0",
-    "jasmine-core": "^2.1.3",
+    "jasmine-core": "^2.3.4",
     "karma": "^0.12.28",
     "karma-coffee-preprocessor": "^0.2.1",
     "karma-firefox-launcher": "^0.1.4",
