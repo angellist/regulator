@@ -16,7 +16,9 @@ require.config
   baseUrl: "/base"
 
   # dynamically load all test files
-  deps: allTestFiles
+  deps: ['node_modules/es6-promise/dist/es6-promise'].concat(allTestFiles)
 
   # we have to kickoff jasmine, as it is asynchronous
-  callback: window.__karma__.start
+  callback: (es6Promise, args...) ->
+    es6Promise.polyfill()
+    window.__karma__.start.apply this, args

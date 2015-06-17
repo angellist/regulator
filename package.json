@@ -22,15 +22,16 @@
   "homepage": "https://github.com/venturehacks/watchers.js",
   "devDependencies": {
     "coffee-script": "^1.9.3",
+    "dotenv": "^1.1.0",
+    "es6-promise": "^2.3.0",
     "jasmine-core": "^2.3.4",
     "karma": "^0.12.28",
     "karma-coffee-preprocessor": "^0.2.1",
-    "karma-firefox-launcher": "^0.1.4",
-    "karma-fixture": "^0.2.1-1",
+    "karma-fixture": "^0.2.5",
     "karma-jasmine": "^0.3.3",
-    "karma-phantomjs-launcher": "^0.1.4",
     "karma-requirejs": "^0.2.2",
+    "karma-sauce-launcher": "^0.2.11",
     "mversion": "^1.9.0",
-    "requirejs": "^2.1.15"
+    "requirejs": "^2.1.18"
   }
 }

@@ -1,7 +1,22 @@
 # Karma configuration
-# Generated on Mon Dec 29 2014 13:44:55 GMT-0800 (PST)
 
+require('dotenv').load()
 module.exports = (config) ->
+
+  customLaunchers = {}
+  for browser in ['chrome', 'firefox', 'safari']
+    customLaunchers["sl_#{browser}"] = {
+      base: 'SauceLabs'
+      browserName: browser
+      platform: 'OS X 10.10'
+    }
+  for browser in ['internet explorer']
+    customLaunchers["sl_#{browser.replace(' ', '-')}"] = {
+      base: 'SauceLabs'
+      browserName: browser
+      platform: 'Windows 8.1'
+    }
+  customLaunchers['sl_opera'] = {base: 'SauceLabs', browserName: 'opera'}
   config.set
 
     # base path that will be used to resolve all patterns (eg. files, exclude)
@@ -16,9 +31,14 @@ module.exports = (config) ->
     # list of files / patterns to load in the browser
     files: [
       'spec/test-main.coffee'
+      {pattern: 'spec/favicon.ico', included: false, served: true} # Otherwise we get 404 warnings
+      {pattern: 'node_modules/es6-promise/dist/es6-promise.js', included: false}
       {pattern: 'src/**/*.coffee', included: false}
       {pattern: 'spec/**/*.spec.coffee', included: false}
     ]
+    proxies: {
+      '/favicon.ico': '/base/spec/favicon.ico'
+    }
 
 
     # list of files to exclude
@@ -36,7 +56,7 @@ module.exports = (config) ->
     # test results reporter to use
     # possible values: 'dots', 'progress'
     # available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['progress']
+    reporters: ['progress', 'saucelabs']
 
 
     # web server port
@@ -63,9 +83,17 @@ module.exports = (config) ->
 
     # start these browsers
     # available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['Firefox']
+    browsers: Object.keys(customLaunchers)
 
 
     # Continuous Integration mode
     # if true, Karma captures browsers, runs the tests and exits
-    singleRun: false
+    singleRun: true
+
+
+    # Custom config for Sauce testing
+    customLaunchers: customLaunchers
+    sauceLabs: {
+      testName: 'Watcher'
+    }
+
