@@ -1,6 +1,7 @@
 watcher
 =======
 [![Build Status](https://travis-ci.org/venturehacks/watcher.svg)](https://travis-ci.org/venturehacks/watcher)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/angellist-oss.svg)](https://saucelabs.com/u/angellist-oss)
 
 Watcher is a tiny opinionless Javascript framework. It aims to keep you sane at any application scale.
 

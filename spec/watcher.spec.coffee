@@ -1,6 +1,9 @@
 define [
   'src/watcher'
 ], (Watcher) ->
+
+  describeIfMutationObserver = (if window.MutationObserver? then describe else xdescribe)
+
   emptyFixture = '<div data-wt="empty"></div>'
   fullFixture = """
 <div data-wt="full">
@@ -62,7 +65,7 @@ define [
         @watcher.scan()
 
         expect(@watcher.initialize.calls.count()).toBe 1
-        expect(@watcher.initialize.calls.allArgs()).toContain fixtures[0]
+        expect(@watcher.initialize.calls.allArgs()).toContain fixtures
 
     describe '#initialize', ->
       class SynchronousWatcher extends Watcher
@@ -114,7 +117,7 @@ define [
             , 5
 
       beforeEach ->
-        @el = fixture.set(fullFixture)[0][0]
+        @el = fixture.set(fullFixture)[0]
 
       sharedExamples = ->
 
@@ -195,7 +198,7 @@ define [
           @watcher = new AsynchronousWatcher
         describe '(shared examples)', sharedExamples
 
-    describe '#observe', ->
+    describeIfMutationObserver '#observe', ->
       afterEach ->
         @watcher.disconnect()
 
@@ -276,7 +279,7 @@ define [
 
       describe '(throttling the scan call)', ->
         beforeEach ->
-          jasmine.clock().install()
+          jasmine.clock().install().mockDate()
 
           storedHandler = null
 
@@ -324,13 +327,24 @@ define [
         it 'invokes scan at the end of the throttle interval when invoked repeatedly', ->
           @triggerScan()
           @triggerScan()
-          expect(@watcher.scan.calls.count()).toBe 1
+          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
 
           jasmine.clock().tick(99)
-          expect(@watcher.scan.calls.count()).toBe 1
+          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
 
           jasmine.clock().tick(2)
-          expect(@watcher.scan.calls.count()).toBe 2
+          expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+
+        it 'invokes scan after the end of the throttle interval when invoked near the end of the interval', ->
+          @triggerScan()
+          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
+
+          jasmine.clock().tick(99)
+          @triggerScan()
+          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
+
+          jasmine.clock().tick(2)
+          expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
 
         it 'coalesces repeated calls at each throttle interval', ->
           @triggerScan()
@@ -354,15 +368,16 @@ define [
     describe '#disconnect', ->
       beforeEach ->
         @watcher = new Watcher (->)
-      it 'disconnects the observer', ->
-        @watcher.observe()
+      describeIfMutationObserver '(if MutationObserver available)', ->
+        it 'disconnects the observer', ->
+          @watcher.observe()
 
-        observer = @watcher._observer
-        expect(observer).not.toBeUndefined() # Sanity
-        spyOn(observer, 'disconnect')
+          observer = @watcher._observer
+          expect(observer).not.toBeUndefined() # Sanity
+          spyOn(observer, 'disconnect')
 
-        @watcher.disconnect()
-        expect(observer.disconnect.calls.count()).toBe 1
+          @watcher.disconnect()
+          expect(observer.disconnect.calls.count()).toBe 1
 
       it 'does not throw an error if called on a non-observing watcher', ->
         @watcher.disconnect()

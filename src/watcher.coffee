@@ -70,11 +70,11 @@
       unless typeof(initialize) == 'function'
         throw new TypeError('invalid initialization function')
       @_options =
-        teardown:         null             # Receives the controller returned (or resolved) by `initialize`
-        attribute:        'data-wt'        # Set this attribute to denote an initializable block in the DOM
-        throttle:         200              # Minimum time to wait between successive DOM scans when observing
-        Promise:          Promise          # Override to replace the Promise implementation
-        MutationObserver: MutationObserver # Override to replace the MutationObserver implementation
+        teardown:         null                    # Receives the controller returned (or resolved) by `initialize`
+        attribute:        'data-wt'               # Set this attribute to denote an initializable block in the DOM
+        throttle:         200                     # Minimum time to wait between successive DOM scans when observing
+        Promise:          window.Promise          # Override to replace the Promise implementation
+        MutationObserver: window.MutationObserver # Override to replace the MutationObserver implementation
       @_options[k] = v for own k, v of options
       @_instanceId = watcherCount++
       @_initializers = {}
