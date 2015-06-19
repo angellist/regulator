@@ -10,11 +10,11 @@ module.exports = (config) ->
       browserName: browser
       platform: 'OS X 10.10'
     }
-  for browser in ['internet explorer']
-    customLaunchers["sl_#{browser.replace(' ', '-')}"] = {
+  for version in ['11', '10', '9', '8']
+    customLaunchers["sl_ie_#{version}"] = {
       base: 'SauceLabs'
-      browserName: browser
-      platform: 'Windows 8.1'
+      browserName: 'internet explorer'
+      version: "#{version}.0"
     }
   customLaunchers['sl_opera'] = {base: 'SauceLabs', browserName: 'opera'}
   config.set
@@ -92,6 +92,7 @@ module.exports = (config) ->
 
 
     # Custom config for Sauce testing
+    captureTimeout: 120000
     customLaunchers: customLaunchers
     sauceLabs: {
       testName: 'Watcher'

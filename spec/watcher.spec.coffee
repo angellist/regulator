@@ -56,16 +56,27 @@ define [
           expect(typeof element).toBe('object') # Sanity check
           expect(@watcher.initialize.calls.allArgs()).toContain [element]
 
-      it 'respects the specified attribute option', ->
-        fixtures = fixture.set '<div data-other-thing="name">content</div>'
-        expect(fixtures.length).toBe 1 # Sanity
+      it 'only initializes elements with the specified attribute', ->
+        fixtures = fixture.set "<div data-other-thing='name' id='expected'>content</div>#{fullFixture}}"
+        expect(fixtures.length).toBe 2 # Sanity
 
         @watcher = new Watcher (->), attribute: 'data-other-thing'
         spyOn @watcher, 'initialize'
         @watcher.scan()
 
-        expect(@watcher.initialize.calls.count()).toBe 1
-        expect(@watcher.initialize.calls.allArgs()).toContain fixtures
+        expect(@watcher.initialize.calls.count()).toBe 1, 'too many calls to initialize'
+        expect(@watcher.initialize.calls.allArgs()).toContain [document.getElementById('expected')]
+
+      it 'only initializes elements within the specified root', ->
+        fixtures = fixture.set "<div id='root'>#{fullFixture}</div>#{nestedFixture}"
+        expect(fixtures.length).toBe 2 # Sanity
+
+        @watcher = new Watcher (->), root: document.getElementById('root')
+        spyOn @watcher, 'initialize'
+        @watcher.scan()
+
+        expect(@watcher.initialize.calls.count()).toBe 1, 'too many calls to initialize'
+        expect(@watcher.initialize.calls.allArgs()).toContain [document.getElementById('root').firstChild]
 
     describe '#initialize', ->
       class SynchronousWatcher extends Watcher

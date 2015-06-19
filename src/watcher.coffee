@@ -20,7 +20,7 @@
       object && typeof(object) is 'object' && object isnt null && object.nodeType is 1 && typeof object.nodeName is 'string'
 
   # Equivalent to $("[#{attribute}]", scope)
-  elementsWithAttribute = (attribute, scope = document) ->
+  elementsWithAttribute = (attribute, scope) ->
     unless isElement(scope) || scope.nodeType == 9 # 9 is the document node
       return []
 
@@ -70,16 +70,17 @@
       unless typeof(initialize) == 'function'
         throw new TypeError('invalid initialization function')
       @_options =
-        teardown:         null                    # Receives the controller returned (or resolved) by `initialize`
         attribute:        'data-wt'               # Set this attribute to denote an initializable block in the DOM
         throttle:         200                     # Minimum time to wait between successive DOM scans when observing
+        root:             window.document.body    # The root element to scan and watch for changes
         Promise:          window.Promise          # Override to replace the Promise implementation
         MutationObserver: window.MutationObserver # Override to replace the MutationObserver implementation
       @_options[k] = v for own k, v of options
       @_instanceId = watcherCount++
-      @_initializers = {}
       @_initialize = initialize
 
+      unless isElement(@_options.root)
+        throw new Error('options.root must be an HTML element (document.body may not be defined yet?)')
       unless @_options.Promise?
         throw new Error('options.Promise is not defined')
 
@@ -104,7 +105,7 @@
     # blocks currently in the DOM have been initialized.
     scan: =>
       # Initialize all elements, no-op if they've already been initialized
-      @_options.Promise.all (@initialize(el) for el in elementsWithAttribute(@_options.attribute))
+      @_options.Promise.all (@initialize(el) for el in elementsWithAttribute(@_options.attribute, @_options.root))
 
     observe: =>
       unless @_options.MutationObserver?
@@ -151,7 +152,7 @@
                   break
 
         @_observer = new @_options.MutationObserver handleMutation
-        @_observer.observe document.getElementsByTagName('body')[0] , childList: true, subtree: true
+        @_observer.observe @_options.root , childList: true, subtree: true
       this
 
     disconnect: =>
