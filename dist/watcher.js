@@ -21,9 +21,6 @@
     };
     elementsWithAttribute = function(attribute, scope) {
       var el, i, len, ref, results;
-      if (scope == null) {
-        scope = document;
-      }
       if (!(isElement(scope) || scope.nodeType === 9)) {
         return [];
       }
@@ -83,6 +80,7 @@
           options = {};
         }
         this.disconnect = bind(this.disconnect, this);
+        this.withController = bind(this.withController, this);
         this.observe = bind(this.observe, this);
         this.scan = bind(this.scan, this);
         this.initialize = bind(this.initialize, this);
@@ -90,11 +88,12 @@
           throw new TypeError('invalid initialization function');
         }
         this._options = {
-          teardown: null,
           attribute: 'data-wt',
           throttle: 200,
-          Promise: Promise,
-          MutationObserver: MutationObserver
+          poll: 1000,
+          root: window.document.body,
+          Promise: window.Promise,
+          MutationObserver: window.MutationObserver
         };
         for (k in options) {
           if (!hasProp.call(options, k)) continue;
@@ -102,8 +101,10 @@
           this._options[k] = v;
         }
         this._instanceId = watcherCount++;
-        this._initializers = {};
         this._initialize = initialize;
+        if (!isElement(this._options.root)) {
+          throw new Error('options.root must be an HTML element (document.body may not be defined yet?)');
+        }
         if (this._options.Promise == null) {
           throw new Error('options.Promise is not defined');
         }
@@ -130,7 +131,7 @@
         var el;
         return this._options.Promise.all((function() {
           var i, len, ref, results;
-          ref = elementsWithAttribute(this._options.attribute);
+          ref = elementsWithAttribute(this._options.attribute, this._options.root);
           results = [];
           for (i = 0, len = ref.length; i < len; i++) {
             el = ref[i];
@@ -142,83 +143,109 @@
 
       Watcher.prototype.observe = function() {
         var handleMutation, throttledScan;
-        if (this._options.MutationObserver == null) {
-          throw new Error('options.MutationObserver is not defined');
-        }
-        if (this._observer == null) {
-          this.scan();
-          throttledScan = ((function(_this) {
-            return function(func, wait) {
-              var _now, later, previous, timeout;
-              _now = function() {
-                return new Date().getTime();
-              };
+        throttledScan = ((function(_this) {
+          return function(func, wait) {
+            var _now, later, previous, timeout;
+            _now = function() {
+              return new Date().getTime();
+            };
+            timeout = null;
+            previous = 0;
+            later = function() {
+              previous = _now();
               timeout = null;
-              previous = 0;
-              later = function() {
-                previous = _now();
-                timeout = null;
-                return func();
-              };
-              return function() {
-                var now, remaining;
-                now = _now();
-                remaining = wait - (now - previous);
-                if (remaining <= 0 || remaining > wait) {
-                  clearTimeout(timeout);
-                  timeout = null;
-                  previous = now;
-                  return func();
-                } else {
-                  if (!timeout) {
-                    return timeout = setTimeout(later, remaining);
-                  }
-                }
-              };
+              return func();
             };
-          })(this))(((function(_this) {
             return function() {
-              return _this.scan();
-            };
-          })(this)), this._options.throttle);
-          handleMutation = (function(_this) {
-            return function(records) {
-              var addedNode, broken, i, len, record, results;
-              broken = false;
-              results = [];
-              for (i = 0, len = records.length; i < len; i++) {
-                record = records[i];
-                if (!broken) {
-                  results.push((function() {
-                    var j, len1, ref, results1;
-                    ref = record.addedNodes;
-                    results1 = [];
-                    for (j = 0, len1 = ref.length; j < len1; j++) {
-                      addedNode = ref[j];
-                      if (hasAttribute(addedNode, this._options.attribute) || elementsWithAttribute(this._options.attribute, addedNode).length > 0) {
-                        throttledScan();
-                        broken = true;
-                        break;
-                      } else {
-                        results1.push(void 0);
-                      }
-                    }
-                    return results1;
-                  }).call(_this));
-                } else {
-                  results.push(void 0);
+              var now, remaining;
+              now = _now();
+              remaining = wait - (now - previous);
+              if (remaining <= 0 || remaining > wait) {
+                clearTimeout(timeout);
+                timeout = null;
+                previous = now;
+                return func();
+              } else {
+                if (!timeout) {
+                  return timeout = setTimeout(later, remaining);
                 }
               }
-              return results;
             };
-          })(this);
-          this._observer = new this._options.MutationObserver(handleMutation);
-          this._observer.observe(document.getElementsByTagName('body')[0], {
-            childList: true,
-            subtree: true
-          });
+          };
+        })(this))(((function(_this) {
+          return function() {
+            return _this.scan();
+          };
+        })(this)), this._options.throttle);
+        if (this._options.MutationObserver != null) {
+          if (this._observer == null) {
+            this.scan();
+            handleMutation = (function(_this) {
+              return function(records) {
+                var addedNode, broken, i, len, record, results;
+                broken = false;
+                results = [];
+                for (i = 0, len = records.length; i < len; i++) {
+                  record = records[i];
+                  if (!broken) {
+                    results.push((function() {
+                      var j, len1, ref, results1;
+                      ref = record.addedNodes;
+                      results1 = [];
+                      for (j = 0, len1 = ref.length; j < len1; j++) {
+                        addedNode = ref[j];
+                        if (hasAttribute(addedNode, this._options.attribute) || elementsWithAttribute(this._options.attribute, addedNode).length > 0) {
+                          throttledScan();
+                          broken = true;
+                          break;
+                        } else {
+                          results1.push(void 0);
+                        }
+                      }
+                      return results1;
+                    }).call(_this));
+                  } else {
+                    results.push(void 0);
+                  }
+                }
+                return results;
+              };
+            })(this);
+            this._observer = new this._options.MutationObserver(handleMutation);
+            this._observer.observe(this._options.root, {
+              childList: true,
+              subtree: true
+            });
+          }
+        } else if (this._options.poll) {
+          if (!this._interval) {
+            this.scan();
+            this._interval = setInterval(((function(_this) {
+              return function() {
+                return _this.scan();
+              };
+            })(this)), this._options.poll);
+          }
+        } else {
+          throw new Error('options.MutationObserver or options.poll must be set');
         }
         return this;
+      };
+
+      Watcher.prototype.withController = function(elements, callback) {
+        var el;
+        if (isElement(elements)) {
+          elements = [elements];
+        }
+        return this._options.Promise.all((function() {
+          var i, len, results;
+          results = [];
+          for (i = 0, len = elements.length; i < len; i++) {
+            el = elements[i];
+            results.push(this.initialize(el).then(callback));
+          }
+          return results;
+        }).call(this));
       };
 
       Watcher.prototype.disconnect = function() {
@@ -226,7 +253,11 @@
         if ((ref = this._observer) != null) {
           ref.disconnect();
         }
-        return this._observer = null;
+        this._observer = void 0;
+        if (this._interval) {
+          clearInterval(this._interval);
+          return this._interval = void 0;
+        }
       };
 
       return Watcher;
