@@ -91,7 +91,7 @@ define [
           @asyncInitialization = false
           @asyncInitializationInvoked = false
 
-          # Allow testing errors
+          # Allow testing errorsmf
           @throwErrorDuringInitialization = false
 
         initializer: (name, el) =>
@@ -209,187 +209,241 @@ define [
           @watcher = new AsynchronousWatcher
         describe '(shared examples)', sharedExamples
 
-    describeIfMutationObserver '#observe', ->
-      afterEach ->
-        @watcher.disconnect()
+    describe '#observe', ->
 
-      describe '(behavior with various fixtures)', ->
+      describe '(with a polling interval)', ->
         beforeEach ->
-          @watcher = new Watcher (->)
-
-        it 'invokes scan once immediately', ->
+          jasmine.clock().install()
+          @watcher = new Watcher (->),
+            MutationObserver: null
+            poll: 100
+            throttle: 1000 # Set a large scan interval - the polling interval should ignore this
           spyOn(@watcher, 'scan')
           @watcher.observe()
-          expect(@watcher.scan.calls.count()).toBe 1
-
-        it 'scans the DOM when new root elements with data-wt are added', (done) ->
-          fixtureAdded = false
-
-          @watcher.observe()
-          spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
-
-          fixture.set fullFixture
-          fixtureAdded = true
-
-        it 'scans the DOM when new nested elements with data-wt are added', (done) ->
-          fixtureAdded = false
-
-          @watcher.observe()
-          spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
-
-          fixture.set nestedFixture
-          fixtureAdded = true
-
-      describe '(scanning only when appropriate)', ->
-        beforeEach ->
-          @mutationProcessed = ->
-            throw new Error('Override this function to get a notification when mutations have been processed')
-
-          # Need to wrap this so the actual function can be set dynamically in the tests
-          mutationProcessedWrapper = =>
-            @mutationProcessed()
-
-          # Normal observer, except we invoke a definable callback whenever mutations are actually handled,
-          # so that we can check to see what happened in the handler
-          FakeObserver = class
-            constructor: (callback) ->
-              wrappedCallback = (args...) ->
-                ret = callback.apply this, args
-                mutationProcessedWrapper()
-                ret
-              @mutationObserver = new MutationObserver(wrappedCallback)
-            observe: (target, opts) => @mutationObserver.observe(target, opts)
-            disconnect: => @mutationObserver.disconnect()
-
-          @watcher = new Watcher((->), MutationObserver: FakeObserver)
-          @watcher.observe()
-
-          spyOn(@watcher, 'scan')
-
-        it '(sanity check) scans the DOM when relevant elements are added', (done) ->
-          # Just a sanity check test to make sure our fake observer is behaving appropriately
-          expect(@watcher.scan.calls.count()).toBe 0 # Paranoia
-          @mutationProcessed = =>
-            expect(@watcher.scan.calls.count()).toBe 1
-            done()
-          fixture.set fullFixture
-
-        it 'does not scan the DOM when irrelevant elements are added', (done) ->
-          @mutationProcessed = =>
-            expect(@watcher.scan.calls.count()).toBe 0
-            done()
-
-          fixture.set deadFixture
-
-        it 'does not scan the DOM when text nodes are added', (done) ->
-          @mutationProcessed = =>
-            expect(@watcher.scan.calls.count()).toBe 0
-            done()
-
-          fixture.el.innerHTML = 'Text node'
-
-      describe '(throttling the scan call)', ->
-        beforeEach ->
-          jasmine.clock().install().mockDate()
-
-          storedHandler = null
-
-          # Dummy observer that allows a single global callback to be invoked at any time
-          FakeObserver = class
-            constructor: (handler) ->
-              @handler = handler
-            observe: ->
-              throw new Error('Shouldn\'t create more than one of these') if storedHandler?
-              storedHandler = @handler
-            disconnect: ->
-              storedHandler = null
-
-          # Invoke the callback with a records object that contains relevant new nodes.
-          # See the spec at https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
-          @triggerScan = =>
-            # Create a temporary real observer to make sure we're passing in the appropriate record list object
-            observer = new MutationObserver(->)
-            observer.observe(fixture.el, subtree: true, childList: true)
-            fixture.set fullFixture, true
-            records = observer.takeRecords()
-            observer.disconnect()
-
-            throw new Error('Unexpected: observer did not find new records') if records.length != 1
-
-            # Invoke the shim handler
-            storedHandler records
-
-          @watcher = new Watcher (->), throttle: 100, MutationObserver: FakeObserver
-          @watcher.observe()
-
-          spyOn(@watcher, 'scan')
 
         afterEach ->
+          @watcher.disconnect()
           jasmine.clock().uninstall()
 
-        it 'invokes scan immediately when called once', ->
-          @triggerScan()
-          expect(@watcher.scan.calls.count()).toBe 1
-        it 'does not invoke scan immediately when called twice', ->
-          @triggerScan()
-          @triggerScan()
+        it 'scans the DOM once immediately', ->
           expect(@watcher.scan.calls.count()).toBe 1
 
-        it 'invokes scan at the end of the throttle interval when invoked repeatedly', ->
-          @triggerScan()
-          @triggerScan()
-          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
-
+        it 'scans the DOM again after the polling interval has elapsed once', ->
           jasmine.clock().tick(99)
-          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
-
+          expect(@watcher.scan.calls.count()).toBe 1
           jasmine.clock().tick(2)
-          expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+          expect(@watcher.scan.calls.count()).toBe 2
 
-        it 'invokes scan after the end of the throttle interval when invoked near the end of the interval', ->
-          @triggerScan()
-          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
-
-          jasmine.clock().tick(99)
-          @triggerScan()
-          expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
-
+        fit 'continues scanning after the polling interval has elapsed more than once', ->
+          jasmine.clock().tick(199)
+          expect(@watcher.scan.calls.count()).toBe 2
           jasmine.clock().tick(2)
-          expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+          expect(@watcher.scan.calls.count()).toBe 3
 
-        it 'coalesces repeated calls at each throttle interval', ->
-          @triggerScan()
-          @triggerScan()
-          @triggerScan()
+      describeIfMutationObserver '(with MutationObserver)', ->
+        afterEach ->
+          @watcher.disconnect()
 
-          jasmine.clock().tick(101)
-          expect(@watcher.scan.calls.count()).toBe 2
+        it 'returns the Watcher instance', ->
+          @watcher = new Watcher (->)
+          expect(@watcher.observe()).toBe @watcher
 
-        it 'does not continue to scan after repeated throttle intervals', ->
-          @triggerScan()
-          @triggerScan()
-          @triggerScan()
+        describe '(behavior with various fixtures)', ->
+          beforeEach ->
+            @watcher = new Watcher (->)
 
-          jasmine.clock().tick(101)
-          expect(@watcher.scan.calls.count()).toBe 2
+          it 'invokes scan once immediately', ->
+            spyOn(@watcher, 'scan')
+            @watcher.observe()
+            expect(@watcher.scan.calls.count()).toBe 1
 
-          jasmine.clock().tick(1000)
-          expect(@watcher.scan.calls.count()).toBe 2
+          it 'scans the DOM when new root elements with data-wt are added', (done) ->
+            fixtureAdded = false
+
+            @watcher.observe()
+            spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
+
+            fixture.set fullFixture
+            fixtureAdded = true
+
+          it 'scans the DOM when new nested elements with data-wt are added', (done) ->
+            fixtureAdded = false
+
+            @watcher.observe()
+            spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
+
+            fixture.set nestedFixture
+            fixtureAdded = true
+
+        describe '(scanning only when appropriate)', ->
+          beforeEach ->
+            @mutationProcessed = ->
+              throw new Error('Override this function to get a notification when mutations have been processed')
+
+            # Need to wrap this so the actual function can be set dynamically in the tests
+            mutationProcessedWrapper = =>
+              @mutationProcessed()
+
+            # Normal observer, except we invoke a definable callback whenever mutations are actually handled,
+            # so that we can check to see what happened in the handler
+            FakeObserver = class
+              constructor: (callback) ->
+                wrappedCallback = (args...) ->
+                  ret = callback.apply this, args
+                  mutationProcessedWrapper()
+                  ret
+                @mutationObserver = new MutationObserver(wrappedCallback)
+              observe: (target, opts) => @mutationObserver.observe(target, opts)
+              disconnect: => @mutationObserver.disconnect()
+
+            @watcher = new Watcher((->), MutationObserver: FakeObserver)
+            @watcher.observe()
+
+            spyOn(@watcher, 'scan')
+
+          it '(sanity check) scans the DOM when relevant elements are added', (done) ->
+            # Just a sanity check test to make sure our fake observer is behaving appropriately
+            expect(@watcher.scan.calls.count()).toBe 0 # Paranoia
+            @mutationProcessed = =>
+              expect(@watcher.scan.calls.count()).toBe 1
+              done()
+            fixture.set fullFixture
+
+          it 'does not scan the DOM when irrelevant elements are added', (done) ->
+            @mutationProcessed = =>
+              expect(@watcher.scan.calls.count()).toBe 0
+              done()
+
+            fixture.set deadFixture
+
+          it 'does not scan the DOM when text nodes are added', (done) ->
+            @mutationProcessed = =>
+              expect(@watcher.scan.calls.count()).toBe 0
+              done()
+
+            fixture.el.innerHTML = 'Text node'
+
+        describe '(throttling the scan call)', ->
+          beforeEach ->
+            jasmine.clock().install().mockDate()
+
+            storedHandler = null
+
+            # Dummy observer that allows a single global callback to be invoked at any time
+            FakeObserver = class
+              constructor: (handler) ->
+                @handler = handler
+              observe: ->
+                throw new Error('Shouldn\'t create more than one of these') if storedHandler?
+                storedHandler = @handler
+              disconnect: ->
+                storedHandler = null
+
+            # Invoke the callback with a records object that contains relevant new nodes.
+            # See the spec at https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+            @triggerScan = =>
+              # Create a temporary real observer to make sure we're passing in the appropriate record list object
+              observer = new MutationObserver(->)
+              observer.observe(fixture.el, subtree: true, childList: true)
+              fixture.set fullFixture, true
+              records = observer.takeRecords()
+              observer.disconnect()
+
+              throw new Error('Unexpected: observer did not find new records') if records.length != 1
+
+              # Invoke the shim handler
+              storedHandler records
+
+            @watcher = new Watcher (->), throttle: 100, MutationObserver: FakeObserver
+            @watcher.observe()
+
+            spyOn(@watcher, 'scan')
+
+          afterEach ->
+            jasmine.clock().uninstall()
+
+          it 'invokes scan immediately when called once', ->
+            @triggerScan()
+            expect(@watcher.scan.calls.count()).toBe 1
+          it 'does not invoke scan immediately when called twice', ->
+            @triggerScan()
+            @triggerScan()
+            expect(@watcher.scan.calls.count()).toBe 1
+
+          it 'invokes scan at the end of the throttle interval when invoked repeatedly', ->
+            @triggerScan()
+            @triggerScan()
+            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
+
+            jasmine.clock().tick(99)
+            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
+
+            jasmine.clock().tick(2)
+            expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+
+          it 'invokes scan after the end of the throttle interval when invoked near the end of the interval', ->
+            @triggerScan()
+            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
+
+            jasmine.clock().tick(99)
+            @triggerScan()
+            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
+
+            jasmine.clock().tick(2)
+            expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+
+          it 'coalesces repeated calls at each throttle interval', ->
+            @triggerScan()
+            @triggerScan()
+            @triggerScan()
+
+            jasmine.clock().tick(101)
+            expect(@watcher.scan.calls.count()).toBe 2
+
+          it 'does not continue to scan after repeated throttle intervals', ->
+            @triggerScan()
+            @triggerScan()
+            @triggerScan()
+
+            jasmine.clock().tick(101)
+            expect(@watcher.scan.calls.count()).toBe 2
+
+            jasmine.clock().tick(1000)
+            expect(@watcher.scan.calls.count()).toBe 2
 
     describe '#disconnect', ->
       beforeEach ->
-        @watcher = new Watcher (->)
-      describeIfMutationObserver '(if MutationObserver available)', ->
-        it 'disconnects the observer', ->
-          @watcher.observe()
+        jasmine.clock().install()
+      afterEach ->
+        jasmine.clock().uninstall()
+      it 'clears the interval if no observer present', ->
+        watcher = new Watcher (->), MutationObserver: null, poll: 50
+        spyOn watcher, 'scan'
 
-          observer = @watcher._observer
-          expect(observer).not.toBeUndefined() # Sanity
-          spyOn(observer, 'disconnect')
+        watcher.observe()
+        jasmine.clock().tick(101)
+        expect(watcher.scan.calls.count()).toBe 3 # Sanity check
 
-          @watcher.disconnect()
-          expect(observer.disconnect.calls.count()).toBe 1
+        watcher.disconnect()
+        jasmine.clock().tick(101)
+        expect(watcher.scan.calls.count()).toBe 3
+
+      it 'disconnects the observer', ->
+        FakeObserver = class
+          constructor: (handler) ->
+            throw new Error('Expected only one call') if FakeObserver.instance?
+            FakeObserver.instance = this
+          observe: ->
+          disconnect: ->
+        watcher = new Watcher (->), MutationObserver: FakeObserver
+        watcher.observe()
+
+        expect(FakeObserver.instance).not.toBeUndefined() # Sanity
+        spyOn(FakeObserver.instance, 'disconnect')
+
+        watcher.disconnect()
+        expect(FakeObserver.instance.disconnect.calls.count()).toBe 1
 
       it 'does not throw an error if called on a non-observing watcher', ->
-        @watcher.disconnect()
+        (new Watcher (->)).disconnect()
         expect(true).toBe true # Just want to make sure no error was thrown

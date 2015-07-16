@@ -72,6 +72,7 @@
       @_options =
         attribute:        'data-wt'               # Set this attribute to denote an initializable block in the DOM
         throttle:         200                     # Minimum time to wait between successive DOM scans when observing
+        poll:             1000                    # The interval to poll the DOM if observing when MutationObserver is not present
         root:             window.document.body    # The root element to scan and watch for changes
         Promise:          window.Promise          # Override to replace the Promise implementation
         MutationObserver: window.MutationObserver # Override to replace the MutationObserver implementation
@@ -108,53 +109,62 @@
       @_options.Promise.all (@initialize(el) for el in elementsWithAttribute(@_options.attribute, @_options.root))
 
     observe: =>
-      unless @_options.MutationObserver?
-        throw new Error('options.MutationObserver is not defined')
-      unless @_observer?
-        @scan() # Scan once right away.
+      # Adapted from Underscore's _.throttle
+      throttledScan = ((func, wait) =>
+        _now = -> new Date().getTime()
+        timeout = null
+        previous = 0
 
-        # Adapted from Underscore's _.throttle
-        throttledScan = ((func, wait) =>
-          _now = -> new Date().getTime()
+        later = =>
+          previous = _now()
           timeout = null
-          previous = 0
+          func()
 
-          later = =>
-            previous = _now()
+        =>
+          now = _now()
+          remaining = wait - (now - previous)
+          if remaining <= 0 || remaining > wait
+
+            # In case we're still waiting on a setTimeout call
+            clearTimeout timeout
             timeout = null
+
+            previous = now
             func()
+          else
+            unless timeout
+              timeout = setTimeout later, remaining
 
-          =>
-            now = _now()
-            remaining = wait - (now - previous)
-            if remaining <= 0 || remaining > wait
+      )((=> @scan()), @_options.throttle)
 
-              # In case we're still waiting on a setTimeout call
-              clearTimeout timeout
-              timeout = null
+      if @_options.MutationObserver?
+        unless @_observer?
+          @scan() # Scan once right away.
 
-              previous = now
-              func()
-            else
-              unless timeout
-                timeout = setTimeout later, remaining
+          handleMutation = (records) =>
+            broken = false # Bail as early as possible
+            for record in records
+              unless broken
+                for addedNode in record.addedNodes
+                  if hasAttribute(addedNode, @_options.attribute) || elementsWithAttribute(@_options.attribute, addedNode).length > 0
+                    throttledScan()
+                    broken = true
+                    break
 
-        )((=> @scan()), @_options.throttle)
-
-        handleMutation = (records) =>
-          broken = false # Bail as early as possible
-          for record in records
-            unless broken
-              for addedNode in record.addedNodes
-                if hasAttribute(addedNode, @_options.attribute) || elementsWithAttribute(@_options.attribute, addedNode).length > 0
-                  throttledScan()
-                  broken = true
-                  break
-
-        @_observer = new @_options.MutationObserver handleMutation
-        @_observer.observe @_options.root , childList: true, subtree: true
+          @_observer = new @_options.MutationObserver handleMutation
+          @_observer.observe @_options.root , childList: true, subtree: true
+      else if @_options.poll
+        unless @_interval
+          @scan()
+          @_interval = setInterval (=> @scan()), @_options.poll
+      else
+        throw new Error('options.MutationObserver or options.poll must be set')
       this
 
     disconnect: =>
       @_observer?.disconnect()
-      @_observer = null
+      @_observer = undefined
+
+      if @_interval
+        clearInterval @_interval
+        @_interval = undefined
