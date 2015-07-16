@@ -161,6 +161,11 @@
         throw new Error('options.MutationObserver or options.poll must be set')
       this
 
+    withController: (elements, callback) =>
+      if isElement(elements)
+        elements = [elements]
+      @_options.Promise.all (@initialize(el).then(callback) for el in elements)
+
     disconnect: =>
       @_observer?.disconnect()
       @_observer = undefined

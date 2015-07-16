@@ -234,7 +234,7 @@ define [
           jasmine.clock().tick(2)
           expect(@watcher.scan.calls.count()).toBe 2
 
-        fit 'continues scanning after the polling interval has elapsed more than once', ->
+        it 'continues scanning after the polling interval has elapsed more than once', ->
           jasmine.clock().tick(199)
           expect(@watcher.scan.calls.count()).toBe 2
           jasmine.clock().tick(2)
@@ -410,6 +410,54 @@ define [
 
             jasmine.clock().tick(1000)
             expect(@watcher.scan.calls.count()).toBe 2
+
+    describe '#withController', ->
+      beforeEach ->
+        @watcher = new Watcher ((name, el) -> return name)
+        fixtures = fixture.set fullFixture, emptyFixture
+        @fullComponent = fixtures[0][0]
+        @emptyComponent = fixtures[1][0]
+
+      it 'initializes the elements it receives', ->
+        spyOn(@watcher, 'initialize').and.callThrough()
+        @watcher.withController [@fullComponent, @emptyComponent], ->
+
+        expect(@watcher.initialize.calls.count()).toBe 2
+
+        args = @watcher.initialize.calls.allArgs()
+        expect(args[0][0]).toBe @fullComponent
+        expect(args[1][0]).toBe @emptyComponent
+
+      it 'initializes a single element', ->
+        spyOn(@watcher, 'initialize').and.callThrough()
+        @watcher.withController @fullComponent, ->
+
+        expect(@watcher.initialize.calls.count()).toBe 1
+        expect(@watcher.initialize.calls.allArgs()[0][0]).toBe @fullComponent
+
+      it 'invokes the callback with the elements passed in', (done) ->
+        calls = []
+        @watcher.withController [@fullComponent, @emptyComponent], (controller) ->
+          calls.push controller
+
+          # Make sure we were invoked for both components
+          if calls.length == 2
+            expect(calls).toContain('full')
+            expect(calls).toContain('empty')
+
+            done()
+
+      it 'invokes the callback with a single element', (done) ->
+        @watcher.withController @fullComponent, (controller) ->
+          expect(controller).toBe 'full'
+          done()
+
+      it 'returns a promise which resolves when the callback has been invoked for all components', (done) ->
+        calls = 0
+        promise = @watcher.withController [@fullComponent, @emptyComponent], -> calls++
+        promise.then ->
+          expect(calls).toBe 2
+          done()
 
     describe '#disconnect', ->
       beforeEach ->
