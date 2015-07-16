@@ -95,6 +95,6 @@ module.exports = (config) ->
     captureTimeout: 120000
     customLaunchers: customLaunchers
     sauceLabs: {
-      testName: 'Watcher'
+      testName: 'Regulator'
     }
 

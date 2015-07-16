@@ -4,10 +4,10 @@
     define factory
   else
     # Browser globals.
-    root.Watcher = factory()
+    root.Regulator = factory()
 ) this, ->
 
-  watcherCount = 0
+  regulatorCount = 0
 
   ## Polyfills and other old browser support
 
@@ -38,17 +38,17 @@
       # https://gist.github.com/Phinome/f21a01ae4fa35b371499
       typeof el[attribute] isnt 'undefined'
 
-  class Watcher
+  class Regulator
     ###*
     # An initialization function for your components. Components are marked by the presence of a `data-wt` attribute
-    # (or whatever attribute you've configured for your `Watcher` instance), and their name is the value of this
+    # (or whatever attribute you've configured for your `Regulator` instance), and their name is the value of this
     # attribute.
     #
     # You're encouraged to structure your application such that the name uniquely describes how to initialize the
     # component.
     #
     # @example
-    #   new Watcher(function (name, el) {
+    #   new Regulator(function (name, el) {
     #     initializer = require('components/' + name);
     #     return initializer(el);
     #   }).observe();
@@ -59,7 +59,7 @@
     # @param {Element} el - The root element of the component being initialized, i.e. the element with a data-wt
     #   attribute.
     # @return {Promise|object} A controller object for this component, or a promise resolving with that object. This
-    #   controller will be returned (as a promise) from the `initialize` method on your watcher instance, and passed
+    #   controller will be returned (as a promise) from the `initialize` method on your regulator instance, and passed
     #   to the teardown callback that you specify.
     ###
 
@@ -70,14 +70,14 @@
       unless typeof(initialize) == 'function'
         throw new TypeError('invalid initialization function')
       @_options =
-        attribute:        'data-wt'               # Set this attribute to denote an initializable block in the DOM
+        attribute:        'data-rc'               # Set this attribute to denote an initializable block in the DOM
         throttle:         200                     # Minimum time to wait between successive DOM scans when observing
         poll:             1000                    # The interval to poll the DOM if observing when MutationObserver is not present
         root:             window.document.body    # The root element to scan and watch for changes
         Promise:          window.Promise          # Override to replace the Promise implementation
         MutationObserver: window.MutationObserver # Override to replace the MutationObserver implementation
       @_options[k] = v for own k, v of options
-      @_instanceId = watcherCount++
+      @_instanceId = regulatorCount++
       @_initialize = initialize
 
       unless isElement(@_options.root)
@@ -91,16 +91,16 @@
       unless hasAttribute el, @_options.attribute
         throw new Error("Element must have a #{@_options.attribute} attribute")
 
-      # Store controllers from this and other Watcher instances on the element.
-      el._watcherControllers ||= {}
+      # Store controllers from this and other Regulator instances on the element.
+      el._regulatorControllers ||= {}
 
       # Store the controller for this instance and return it.
-      unless el._watcherControllers[@_instanceId]?
+      unless el._regulatorControllers[@_instanceId]?
         name = el.getAttribute @_options.attribute
-        el._watcherControllers[@_instanceId] = new @_options.Promise (resolve) =>
+        el._regulatorControllers[@_instanceId] = new @_options.Promise (resolve) =>
           resolve @_initialize(name, el)
 
-      el._watcherControllers[@_instanceId]
+      el._regulatorControllers[@_instanceId]
 
     # Scan the DOM immediately, and initialize any uninitialized blocks. Returns a promise that resolves when all
     # blocks currently in the DOM have been initialized.

@@ -7,11 +7,11 @@
     if (typeof define === 'function' && define.amd) {
       return define(factory);
     } else {
-      return root.Watcher = factory();
+      return root.Regulator = factory();
     }
   })(this, function() {
-    var Watcher, elementsWithAttribute, hasAttribute, isElement, watcherCount;
-    watcherCount = 0;
+    var Regulator, elementsWithAttribute, hasAttribute, isElement, regulatorCount;
+    regulatorCount = 0;
     isElement = function(object) {
       if (typeof HTMLElement === 'object') {
         return object instanceof HTMLElement;
@@ -45,18 +45,18 @@
         return typeof el[attribute] !== 'undefined';
       }
     };
-    return Watcher = (function() {
+    return Regulator = (function() {
 
       /**
        * An initialization function for your components. Components are marked by the presence of a `data-wt` attribute
-       * (or whatever attribute you've configured for your `Watcher` instance), and their name is the value of this
+       * (or whatever attribute you've configured for your `Regulator` instance), and their name is the value of this
        * attribute.
        *
        * You're encouraged to structure your application such that the name uniquely describes how to initialize the
        * component.
        *
        * @example
-       *   new Watcher(function (name, el) {
+       *   new Regulator(function (name, el) {
        *     initializer = require('components/' + name);
        *     return initializer(el);
        *   }).observe();
@@ -67,14 +67,14 @@
        * @param {Element} el - The root element of the component being initialized, i.e. the element with a data-wt
        *   attribute.
        * @return {Promise|object} A controller object for this component, or a promise resolving with that object. This
-       *   controller will be returned (as a promise) from the `initialize` method on your watcher instance, and passed
+       *   controller will be returned (as a promise) from the `initialize` method on your regulator instance, and passed
        *   to the teardown callback that you specify.
        */
 
       /**
        * @param {initializeCallback} initialize - The function to initialize your components
        */
-      function Watcher(initialize, options) {
+      function Regulator(initialize, options) {
         var k, v;
         if (options == null) {
           options = {};
@@ -88,7 +88,7 @@
           throw new TypeError('invalid initialization function');
         }
         this._options = {
-          attribute: 'data-wt',
+          attribute: 'data-rc',
           throttle: 200,
           poll: 1000,
           root: window.document.body,
@@ -100,7 +100,7 @@
           v = options[k];
           this._options[k] = v;
         }
-        this._instanceId = watcherCount++;
+        this._instanceId = regulatorCount++;
         this._initialize = initialize;
         if (!isElement(this._options.root)) {
           throw new Error('options.root must be an HTML element (document.body may not be defined yet?)');
@@ -110,24 +110,24 @@
         }
       }
 
-      Watcher.prototype.initialize = function(el) {
+      Regulator.prototype.initialize = function(el) {
         var name;
         if (!hasAttribute(el, this._options.attribute)) {
           throw new Error("Element must have a " + this._options.attribute + " attribute");
         }
-        el._watcherControllers || (el._watcherControllers = {});
-        if (el._watcherControllers[this._instanceId] == null) {
+        el._regulatorControllers || (el._regulatorControllers = {});
+        if (el._regulatorControllers[this._instanceId] == null) {
           name = el.getAttribute(this._options.attribute);
-          el._watcherControllers[this._instanceId] = new this._options.Promise((function(_this) {
+          el._regulatorControllers[this._instanceId] = new this._options.Promise((function(_this) {
             return function(resolve) {
               return resolve(_this._initialize(name, el));
             };
           })(this));
         }
-        return el._watcherControllers[this._instanceId];
+        return el._regulatorControllers[this._instanceId];
       };
 
-      Watcher.prototype.scan = function() {
+      Regulator.prototype.scan = function() {
         var el;
         return this._options.Promise.all((function() {
           var i, len, ref, results;
@@ -141,7 +141,7 @@
         }).call(this));
       };
 
-      Watcher.prototype.observe = function() {
+      Regulator.prototype.observe = function() {
         var handleMutation, throttledScan;
         throttledScan = ((function(_this) {
           return function(func, wait) {
@@ -232,7 +232,7 @@
         return this;
       };
 
-      Watcher.prototype.withController = function(elements, callback) {
+      Regulator.prototype.withController = function(elements, callback) {
         var el;
         if (isElement(elements)) {
           elements = [elements];
@@ -248,7 +248,7 @@
         }).call(this));
       };
 
-      Watcher.prototype.disconnect = function() {
+      Regulator.prototype.disconnect = function() {
         var ref;
         if ((ref = this._observer) != null) {
           ref.disconnect();
@@ -260,7 +260,7 @@
         }
       };
 
-      return Watcher;
+      return Regulator;
 
     })();
   });

@@ -1,18 +1,18 @@
-watcher
-=======
-[![Build Status](https://travis-ci.org/venturehacks/watcher.svg)](https://travis-ci.org/venturehacks/watcher)
+Regulator
+=========
+[![Build Status](https://travis-ci.org/AngelList/regulator.svg)](https://travis-ci.org/AngelList/regulator)
 [![Sauce Test Status](https://saucelabs.com/browser-matrix/angellist-oss.svg)](https://saucelabs.com/u/angellist-oss)
 
-Watcher is a tiny, opinionless tool for structuring your Javascript applications. We use it internally at
+Regulator is a tiny, opinionless tool for structuring your Javascript applications. We use it internally at
 [AngelList](https://angel.co). It aims to keep you sane at any application scale.
 
-Watcher weighs about 1.2KB (compressed). It requires a [Promises/A+](https://promisesaplus.com/) implementation.
+Regulator weighs about 1.2KB (compressed). It requires a [Promises/A+](https://promisesaplus.com/) implementation.
 It also optionally makes use of `MutationObserver` for reacting to changes in the DOM.
 
 Motivation
 ----------
 
-The world is filled with excellent Javascript frameworks, many of them full-featured and highly structured. Watcher is
+The world is filled with excellent Javascript frameworks, many of them full-featured and highly structured. Regulator is
 extremely minimal, simply managing structured initialization of your components and allowing them to communicate with
 each other. Perfect for loosely coupled applications at any scale, using any toolkit.
 
@@ -36,10 +36,10 @@ Denote components on your page with `data-wt`, and give them a name that describ
 <button data-wt="alert">Click me</button>
 ```
 
-Create a `Watcher` instance and tell it how to initialize your components:
+Create a `Regulator` instance and tell it how to initialize your components:
 
 ```
-var myWatcher = new Watcher(function(name, el) {
+var myRegulator = new Regulator(function(name, el) {
   return require('initializers/' + name)(el);
 }).observe();
 ```
@@ -60,10 +60,10 @@ var content = $.get(someUrl); // Contains a "popup" block
 $('body').append(content); // "popup" block is initialized automatically
 ```
 
-You can access the return value of the initialization function through your `Watcher` instance:
+You can access the return value of the initialization function through your `Regulator` instance:
 
 ```
-myWatcher.withController($("[data-wt='AlertButton']"), function(controller) {
+myRegulator.withController($("[data-wt='AlertButton']"), function(controller) {
   controller.triggerAlert();
 });
 ```
@@ -71,9 +71,9 @@ myWatcher.withController($("[data-wt='AlertButton']"), function(controller) {
 API
 ---
 
-##### Creating a `Watcher` instance
+##### Creating a `Regulator` instance
 
-`new Watcher(initializer, options = {})`
+`new Regulator(initializer, options = {})`
 
 Here `initializer` is a function which takes `(name, el)`, where `name` is the name of a component
 and `el` is its root element. The return value of this function is referred to as the element's _controller_.
@@ -93,30 +93,30 @@ Available options are:
 
 Depending on your use case, you can initialize your components in one of three ways:
 
-`Watcher#initialize(element)`
+`Regulator#initialize(element)`
 
 Synchronously invokes the initializer for a single component. If called repeatedly, only invokes the initializer once.
 Returns a `Promise` resolving to the element's controller.
 
-`Watcher#scan()`
+`Regulator#scan()`
 
 Synchronously finds and initializes all components which haven't been initialized yet. Returns a promise that resolves
 when all initializations are complete.
 
-`Watcher#observe()`
+`Regulator#observe()`
 
 Observes the page for changes, and initializes new components as they're added. If `MutationObserver` is present,
 uses it for relatively performant initialization; otherwise, falls back to `#scan` running repeatedly at the interval
 specified by the `poll` option.
 
-Watcher is optimized for fast detection of relevant changes to the DOM, but you should be aware of the performance
+Regulator is optimized for fast detection of relevant changes to the DOM, but you should be aware of the performance
 implications of `MutationObserver` or polling when using this option. You should also be aware that initialization
 will occur asynchronously, at some point after elements have been added to the page. If you need finer-grained
 control, use `#scan` or `#initialize`.
 
 ##### Accessing your controllers
 
-`Watcher#withController(iterable, callback)`
+`Regulator#withController(iterable, callback)`
 
 Invokes `callback` with the controller for each component root in `iterable` (`iterable` can also be a single element).
 Also initializes the components if they haven't been already.
@@ -124,7 +124,7 @@ Also initializes the components if they haven't been already.
 Controllers can also be accessed through the return value of `#initialize`:
  
 ```
-watcher.initialize(el).then(function(controller) {
+myRegulator.initialize(el).then(function(controller) {
   // ...
 });
 ```

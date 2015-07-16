@@ -1,8 +1,8 @@
 {
-  "name": "watcher",
+  "name": "regulator",
   "version": "0.9.0",
   "description": "A tiny, opinionless tool for structuring your Javascript applications",
-  "main": "dist/watcher.js",
+  "main": "dist/regulator.js",
   "scripts": {
     "build": "./node_modules/.bin/coffee -c -o dist/ src/",
     "preupdate": "npm run build",

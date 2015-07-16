@@ -1,52 +1,52 @@
 define [
-  'src/watcher'
-], (Watcher) ->
+  'src/regulator'
+], (Regulator) ->
 
   describeIfMutationObserver = (if window.MutationObserver? then describe else xdescribe)
 
-  emptyFixture = '<div data-wt="empty"></div>'
+  emptyFixture = '<div data-rc="empty"></div>'
   fullFixture = """
-<div data-wt="full">
+<div data-rc="full">
   <span>Test content</span>
 </div>
 """
 
   nestedFixture = """
 <div>
-  <div data-wt="nested">Content</div>
+  <div data-rc="nested">Content</div>
 </div>
 """
 
   doubleNestedFixture = """
-<span id="nested-outer" data-wt="nested-outer">
+<span id="nested-outer" data-rc="nested-outer">
   <div>Outer content</div>
-  <strong id="nested-inner" data-wt="nested-inner">
+  <strong id="nested-inner" data-rc="nested-inner">
     <span>Nested content</span>
   </strong>
 </span>
 """
   deadFixture = '<span class="dead">No initialized content here</span>'
 
-  describe Watcher, ->
+  describe Regulator, ->
     describe '#scan', ->
       beforeEach ->
-        @watcher = new Watcher (->)
-        spyOn(@watcher, 'initialize')
+        @regulator = new Regulator (->)
+        spyOn(@regulator, 'initialize')
 
-      it 'initializes all elements with data-wt set', ->
+      it 'initializes all elements with data-rc set', ->
         fixtures = fixture.set emptyFixture, fullFixture, fullFixture
-        @watcher.scan()
-        expect(@watcher.initialize.calls.count()).toBe 3
+        @regulator.scan()
+        expect(@regulator.initialize.calls.count()).toBe 3
 
         expect(fixtures.length).toBe 3 # Sanity
         for f in fixtures
           expect(f.length).toBe 1 # Sanity, make sure fixture.set returns an array of arrays
-          expect(@watcher.initialize.calls.allArgs()).toContain f # Each argument list is also a one-element array
+          expect(@regulator.initialize.calls.allArgs()).toContain f # Each argument list is also a one-element array
 
       it 'initializes elements nested within one another', ->
         fixture.set doubleNestedFixture
-        @watcher.scan()
-        expect(@watcher.initialize.calls.count()).toBe 2
+        @regulator.scan()
+        expect(@regulator.initialize.calls.count()).toBe 2
 
         elements = (document.getElementById(id) for id in ['nested-inner', 'nested-outer'])
 
@@ -54,39 +54,39 @@ define [
         for element in elements
 
           expect(typeof element).toBe('object') # Sanity check
-          expect(@watcher.initialize.calls.allArgs()).toContain [element]
+          expect(@regulator.initialize.calls.allArgs()).toContain [element]
 
       it 'only initializes elements with the specified attribute', ->
         fixtures = fixture.set "<div data-other-thing='name' id='expected'>content</div>#{fullFixture}}"
         expect(fixtures.length).toBe 2 # Sanity
 
-        @watcher = new Watcher (->), attribute: 'data-other-thing'
-        spyOn @watcher, 'initialize'
-        @watcher.scan()
+        @regulator = new Regulator (->), attribute: 'data-other-thing'
+        spyOn @regulator, 'initialize'
+        @regulator.scan()
 
-        expect(@watcher.initialize.calls.count()).toBe 1, 'too many calls to initialize'
-        expect(@watcher.initialize.calls.allArgs()).toContain [document.getElementById('expected')]
+        expect(@regulator.initialize.calls.count()).toBe 1, 'too many calls to initialize'
+        expect(@regulator.initialize.calls.allArgs()).toContain [document.getElementById('expected')]
 
       it 'only initializes elements within the specified root', ->
         fixtures = fixture.set "<div id='root'>#{fullFixture}</div>#{nestedFixture}"
         expect(fixtures.length).toBe 2 # Sanity
 
-        @watcher = new Watcher (->), root: document.getElementById('root')
-        spyOn @watcher, 'initialize'
-        @watcher.scan()
+        @regulator = new Regulator (->), root: document.getElementById('root')
+        spyOn @regulator, 'initialize'
+        @regulator.scan()
 
-        expect(@watcher.initialize.calls.count()).toBe 1, 'too many calls to initialize'
-        expect(@watcher.initialize.calls.allArgs()).toContain [document.getElementById('root').firstChild]
+        expect(@regulator.initialize.calls.count()).toBe 1, 'too many calls to initialize'
+        expect(@regulator.initialize.calls.allArgs()).toContain [document.getElementById('root').firstChild]
 
     describe '#initialize', ->
-      class SynchronousWatcher extends Watcher
+      class SynchronousRegulator extends Regulator
         constructor: (options = {})->
           super @initializer, options
           @allowedNames = ['empty', 'full', 'nested-inner', 'nested-outer']
           @invocationCounts = {}
 
           # If true, initializer functions will return a promise instead of a plain value. Note that this is different
-          # from the case where initializer functions are retrieved asynchronously (see AsynchronousWatcher for that
+          # from the case where initializer functions are retrieved asynchronously (see AsynchronousRegulator for that
           # case), and that these two cases are not mutually exclusive.
           @asyncInitialization = false
           @asyncInitializationInvoked = false
@@ -119,7 +119,7 @@ define [
             throwError()
             ret
 
-      class AsynchronousWatcher extends SynchronousWatcher
+      class AsynchronousRegulator extends SynchronousRegulator
         initializer: (name) ->
           orig = super
           new Promise (resolve) =>
@@ -139,31 +139,31 @@ define [
         it 'invokes the initializer for the element on the first call', (done) ->
           # Sanity checks
           expect(@el.className).toBe ''
-          expect(@watcher.invocationCounts['full']).toBeUndefined()
+          expect(@regulator.invocationCounts['full']).toBeUndefined()
 
-          @watcher.initialize(@el).then =>
-            expect(@watcher.invocationCounts['full']).toBe 1
+          @regulator.initialize(@el).then =>
+            expect(@regulator.invocationCounts['full']).toBe 1
             expect(@el.className).toBe 'full'
             done()
 
         it 'does not invoke the initializer again on successive synchronous calls', (done) ->
-          promise1 = @watcher.initialize(@el)
-          @watcher.initialize(@el).then =>
+          promise1 = @regulator.initialize(@el)
+          @regulator.initialize(@el).then =>
             promise1.then =>
-              expect(@watcher.invocationCounts['full']).toBe 1
+              expect(@regulator.invocationCounts['full']).toBe 1
               done()
 
         it 'does not invoke the initializer again on successive asynchronous calls', (done) ->
-          @watcher.initialize(@el).then =>
-            @watcher.initialize(@el).then =>
-              expect(@watcher.invocationCounts['full']).toBe 1
+          @regulator.initialize(@el).then =>
+            @regulator.initialize(@el).then =>
+              expect(@regulator.invocationCounts['full']).toBe 1
               done()
 
         it 'invokes the initializer across multiple elements with the same root name', (done) ->
           fixtures = fixture.set fullFixture, fullFixture, fullFixture
-          promises = (@watcher.initialize(f[0]) for f in fixtures)
+          promises = (@regulator.initialize(f[0]) for f in fixtures)
           Promise.all(promises).then =>
-            expect(@watcher.invocationCounts['full']).toBe 3
+            expect(@regulator.invocationCounts['full']).toBe 3
             done()
 
         ###
@@ -172,16 +172,16 @@ define [
 
         sharedErrorExamples = -> # Shared between the async/sync return value cases
           beforeEach ->
-            @watcher.throwErrorDuringInitialization = true
+            @regulator.throwErrorDuringInitialization = true
 
           it 'allows initialization errors to be caught directly', (done) ->
-            @watcher.initialize(@el).catch (error) =>
+            @regulator.initialize(@el).catch (error) =>
               expect(error.message).toBe 'Test error'
               done()
 
         describe 'when the initializer returns a synchronous value', ->
           it 'returns a promise which resolves to the initializer\'s synchronous return value', (done) ->
-            @watcher.initialize(@el).then (resolvedValue) ->
+            @regulator.initialize(@el).then (resolvedValue) ->
               expect(resolvedValue).toEqual name: 'full'
               done()
 
@@ -189,24 +189,24 @@ define [
 
         describe 'when the initializer returns an asynchronous value', ->
           beforeEach ->
-            @watcher.asyncInitialization = true
+            @regulator.asyncInitialization = true
 
           it 'returns a promise which resolves to the initializer\'s eventual value', (done) ->
-            @watcher.initialize(@el).then (resolvedValue) =>
-              expect(@watcher.asyncInitializationInvoked).toBe true # Sanity check
+            @regulator.initialize(@el).then (resolvedValue) =>
+              expect(@regulator.asyncInitializationInvoked).toBe true # Sanity check
               expect(resolvedValue).toEqual name: 'full'
               done()
           describe '(shared error examples)', sharedErrorExamples
 
       describe 'with a synchronously generated initializer', ->
         beforeEach ->
-          @watcher = new SynchronousWatcher
+          @regulator = new SynchronousRegulator
         describe '(shared examples)', sharedExamples
 
 
       describe 'with an asynchronously generated initializer', ->
         beforeEach ->
-          @watcher = new AsynchronousWatcher
+          @regulator = new AsynchronousRegulator
         describe '(shared examples)', sharedExamples
 
     describe '#observe', ->
@@ -214,63 +214,63 @@ define [
       describe '(with a polling interval)', ->
         beforeEach ->
           jasmine.clock().install()
-          @watcher = new Watcher (->),
+          @regulator = new Regulator (->),
             MutationObserver: null
             poll: 100
             throttle: 1000 # Set a large scan interval - the polling interval should ignore this
-          spyOn(@watcher, 'scan')
-          @watcher.observe()
+          spyOn(@regulator, 'scan')
+          @regulator.observe()
 
         afterEach ->
-          @watcher.disconnect()
+          @regulator.disconnect()
           jasmine.clock().uninstall()
 
         it 'scans the DOM once immediately', ->
-          expect(@watcher.scan.calls.count()).toBe 1
+          expect(@regulator.scan.calls.count()).toBe 1
 
         it 'scans the DOM again after the polling interval has elapsed once', ->
           jasmine.clock().tick(99)
-          expect(@watcher.scan.calls.count()).toBe 1
+          expect(@regulator.scan.calls.count()).toBe 1
           jasmine.clock().tick(2)
-          expect(@watcher.scan.calls.count()).toBe 2
+          expect(@regulator.scan.calls.count()).toBe 2
 
         it 'continues scanning after the polling interval has elapsed more than once', ->
           jasmine.clock().tick(199)
-          expect(@watcher.scan.calls.count()).toBe 2
+          expect(@regulator.scan.calls.count()).toBe 2
           jasmine.clock().tick(2)
-          expect(@watcher.scan.calls.count()).toBe 3
+          expect(@regulator.scan.calls.count()).toBe 3
 
       describeIfMutationObserver '(with MutationObserver)', ->
         afterEach ->
-          @watcher.disconnect()
+          @regulator.disconnect()
 
-        it 'returns the Watcher instance', ->
-          @watcher = new Watcher (->)
-          expect(@watcher.observe()).toBe @watcher
+        it 'returns the Regulator instance', ->
+          @regulator = new Regulator (->)
+          expect(@regulator.observe()).toBe @regulator
 
         describe '(behavior with various fixtures)', ->
           beforeEach ->
-            @watcher = new Watcher (->)
+            @regulator = new Regulator (->)
 
           it 'invokes scan once immediately', ->
-            spyOn(@watcher, 'scan')
-            @watcher.observe()
-            expect(@watcher.scan.calls.count()).toBe 1
+            spyOn(@regulator, 'scan')
+            @regulator.observe()
+            expect(@regulator.scan.calls.count()).toBe 1
 
-          it 'scans the DOM when new root elements with data-wt are added', (done) ->
+          it 'scans the DOM when new root elements with data-rc are added', (done) ->
             fixtureAdded = false
 
-            @watcher.observe()
-            spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
+            @regulator.observe()
+            spyOn(@regulator, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
 
             fixture.set fullFixture
             fixtureAdded = true
 
-          it 'scans the DOM when new nested elements with data-wt are added', (done) ->
+          it 'scans the DOM when new nested elements with data-rc are added', (done) ->
             fixtureAdded = false
 
-            @watcher.observe()
-            spyOn(@watcher, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
+            @regulator.observe()
+            spyOn(@regulator, 'scan').and.callFake -> expect(fixtureAdded).toBe true ; done()
 
             fixture.set nestedFixture
             fixtureAdded = true
@@ -296,29 +296,29 @@ define [
               observe: (target, opts) => @mutationObserver.observe(target, opts)
               disconnect: => @mutationObserver.disconnect()
 
-            @watcher = new Watcher((->), MutationObserver: FakeObserver)
-            @watcher.observe()
+            @regulator = new Regulator((->), MutationObserver: FakeObserver)
+            @regulator.observe()
 
-            spyOn(@watcher, 'scan')
+            spyOn(@regulator, 'scan')
 
           it '(sanity check) scans the DOM when relevant elements are added', (done) ->
             # Just a sanity check test to make sure our fake observer is behaving appropriately
-            expect(@watcher.scan.calls.count()).toBe 0 # Paranoia
+            expect(@regulator.scan.calls.count()).toBe 0 # Paranoia
             @mutationProcessed = =>
-              expect(@watcher.scan.calls.count()).toBe 1
+              expect(@regulator.scan.calls.count()).toBe 1
               done()
             fixture.set fullFixture
 
           it 'does not scan the DOM when irrelevant elements are added', (done) ->
             @mutationProcessed = =>
-              expect(@watcher.scan.calls.count()).toBe 0
+              expect(@regulator.scan.calls.count()).toBe 0
               done()
 
             fixture.set deadFixture
 
           it 'does not scan the DOM when text nodes are added', (done) ->
             @mutationProcessed = =>
-              expect(@watcher.scan.calls.count()).toBe 0
+              expect(@regulator.scan.calls.count()).toBe 0
               done()
 
             fixture.el.innerHTML = 'Text node'
@@ -354,43 +354,43 @@ define [
               # Invoke the shim handler
               storedHandler records
 
-            @watcher = new Watcher (->), throttle: 100, MutationObserver: FakeObserver
-            @watcher.observe()
+            @regulator = new Regulator (->), throttle: 100, MutationObserver: FakeObserver
+            @regulator.observe()
 
-            spyOn(@watcher, 'scan')
+            spyOn(@regulator, 'scan')
 
           afterEach ->
             jasmine.clock().uninstall()
 
           it 'invokes scan immediately when called once', ->
             @triggerScan()
-            expect(@watcher.scan.calls.count()).toBe 1
+            expect(@regulator.scan.calls.count()).toBe 1
           it 'does not invoke scan immediately when called twice', ->
             @triggerScan()
             @triggerScan()
-            expect(@watcher.scan.calls.count()).toBe 1
+            expect(@regulator.scan.calls.count()).toBe 1
 
           it 'invokes scan at the end of the throttle interval when invoked repeatedly', ->
             @triggerScan()
             @triggerScan()
-            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
+            expect(@regulator.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
 
             jasmine.clock().tick(99)
-            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
+            expect(@regulator.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
 
             jasmine.clock().tick(2)
-            expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+            expect(@regulator.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
 
           it 'invokes scan after the end of the throttle interval when invoked near the end of the interval', ->
             @triggerScan()
-            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
+            expect(@regulator.scan.calls.count()).toBe 1, 'multiple scans triggered right away'
 
             jasmine.clock().tick(99)
             @triggerScan()
-            expect(@watcher.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
+            expect(@regulator.scan.calls.count()).toBe 1, 'multiple scans triggered before interval is finished'
 
             jasmine.clock().tick(2)
-            expect(@watcher.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
+            expect(@regulator.scan.calls.count()).toBe 2, 'multiple scans not triggered after interval'
 
           it 'coalesces repeated calls at each throttle interval', ->
             @triggerScan()
@@ -398,7 +398,7 @@ define [
             @triggerScan()
 
             jasmine.clock().tick(101)
-            expect(@watcher.scan.calls.count()).toBe 2
+            expect(@regulator.scan.calls.count()).toBe 2
 
           it 'does not continue to scan after repeated throttle intervals', ->
             @triggerScan()
@@ -406,38 +406,38 @@ define [
             @triggerScan()
 
             jasmine.clock().tick(101)
-            expect(@watcher.scan.calls.count()).toBe 2
+            expect(@regulator.scan.calls.count()).toBe 2
 
             jasmine.clock().tick(1000)
-            expect(@watcher.scan.calls.count()).toBe 2
+            expect(@regulator.scan.calls.count()).toBe 2
 
     describe '#withController', ->
       beforeEach ->
-        @watcher = new Watcher ((name, el) -> return name)
+        @regulator = new Regulator ((name, el) -> return name)
         fixtures = fixture.set fullFixture, emptyFixture
         @fullComponent = fixtures[0][0]
         @emptyComponent = fixtures[1][0]
 
       it 'initializes the elements it receives', ->
-        spyOn(@watcher, 'initialize').and.callThrough()
-        @watcher.withController [@fullComponent, @emptyComponent], ->
+        spyOn(@regulator, 'initialize').and.callThrough()
+        @regulator.withController [@fullComponent, @emptyComponent], ->
 
-        expect(@watcher.initialize.calls.count()).toBe 2
+        expect(@regulator.initialize.calls.count()).toBe 2
 
-        args = @watcher.initialize.calls.allArgs()
+        args = @regulator.initialize.calls.allArgs()
         expect(args[0][0]).toBe @fullComponent
         expect(args[1][0]).toBe @emptyComponent
 
       it 'initializes a single element', ->
-        spyOn(@watcher, 'initialize').and.callThrough()
-        @watcher.withController @fullComponent, ->
+        spyOn(@regulator, 'initialize').and.callThrough()
+        @regulator.withController @fullComponent, ->
 
-        expect(@watcher.initialize.calls.count()).toBe 1
-        expect(@watcher.initialize.calls.allArgs()[0][0]).toBe @fullComponent
+        expect(@regulator.initialize.calls.count()).toBe 1
+        expect(@regulator.initialize.calls.allArgs()[0][0]).toBe @fullComponent
 
       it 'invokes the callback with the elements passed in', (done) ->
         calls = []
-        @watcher.withController [@fullComponent, @emptyComponent], (controller) ->
+        @regulator.withController [@fullComponent, @emptyComponent], (controller) ->
           calls.push controller
 
           # Make sure we were invoked for both components
@@ -448,13 +448,13 @@ define [
             done()
 
       it 'invokes the callback with a single element', (done) ->
-        @watcher.withController @fullComponent, (controller) ->
+        @regulator.withController @fullComponent, (controller) ->
           expect(controller).toBe 'full'
           done()
 
       it 'returns a promise which resolves when the callback has been invoked for all components', (done) ->
         calls = 0
-        promise = @watcher.withController [@fullComponent, @emptyComponent], -> calls++
+        promise = @regulator.withController [@fullComponent, @emptyComponent], -> calls++
         promise.then ->
           expect(calls).toBe 2
           done()
@@ -465,16 +465,16 @@ define [
       afterEach ->
         jasmine.clock().uninstall()
       it 'clears the interval if no observer present', ->
-        watcher = new Watcher (->), MutationObserver: null, poll: 50
-        spyOn watcher, 'scan'
+        regulator = new Regulator (->), MutationObserver: null, poll: 50
+        spyOn regulator, 'scan'
 
-        watcher.observe()
+        regulator.observe()
         jasmine.clock().tick(101)
-        expect(watcher.scan.calls.count()).toBe 3 # Sanity check
+        expect(regulator.scan.calls.count()).toBe 3 # Sanity check
 
-        watcher.disconnect()
+        regulator.disconnect()
         jasmine.clock().tick(101)
-        expect(watcher.scan.calls.count()).toBe 3
+        expect(regulator.scan.calls.count()).toBe 3
 
       it 'disconnects the observer', ->
         FakeObserver = class
@@ -483,15 +483,15 @@ define [
             FakeObserver.instance = this
           observe: ->
           disconnect: ->
-        watcher = new Watcher (->), MutationObserver: FakeObserver
-        watcher.observe()
+        regulator = new Regulator (->), MutationObserver: FakeObserver
+        regulator.observe()
 
         expect(FakeObserver.instance).not.toBeUndefined() # Sanity
         spyOn(FakeObserver.instance, 'disconnect')
 
-        watcher.disconnect()
+        regulator.disconnect()
         expect(FakeObserver.instance.disconnect.calls.count()).toBe 1
 
-      it 'does not throw an error if called on a non-observing watcher', ->
-        (new Watcher (->)).disconnect()
+      it 'does not throw an error if called on a non-observing regulator', ->
+        (new Regulator (->)).disconnect()
         expect(true).toBe true # Just want to make sure no error was thrown
