@@ -4,7 +4,7 @@
   "authors": [
     "Kevin Montag <k2@angel.co>"
   ],
-  "description": "A tiny opinionless Javascript framework",
+  "description": "A tiny, opinionless tool for structuring your Javascript applications",
   "main": "dist/watcher.js",
   "moduleType": [
     "amd",

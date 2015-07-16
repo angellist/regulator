@@ -1,7 +1,7 @@
 {
   "name": "watcher",
   "version": "0.9.0",
-  "description": "A tiny opinionless Javascript framework",
+  "description": "A tiny, opinionless tool for structuring your Javascript applications",
   "main": "dist/watcher.js",
   "scripts": {
     "build": "./node_modules/.bin/coffee -c -o dist/ src/",
