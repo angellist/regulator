@@ -9,6 +9,10 @@ Regulator is a tiny, opinionless tool for structuring your Javascript applicatio
 Regulator weighs about 1.2KB (compressed). It requires a [Promises/A+](https://promisesaplus.com/) implementation.
 It also optionally makes use of `MutationObserver` for reacting to changes in the DOM.
 
+```
+bower install regulator
+```
+
 Motivation
 ----------
 
