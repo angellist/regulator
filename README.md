@@ -57,17 +57,17 @@ module.exports = function(el) {
 };
 ```
 
-Now whenever you add an element with `data-wt="popup"` to the DOM, a click listener will be bound:
+Now whenever you add an element with `data-wt="alert"` to the DOM, a click listener will be bound:
 
 ```
-var content = $.get(someUrl); // Contains a "popup" block
-$('body').append(content); // "popup" block is initialized automatically
+var content = $.get(someUrl); // Contains an "alert" block
+$('body').append(content); // "alert" block is initialized automatically
 ```
 
 You can access the return value of the initialization function through your `Regulator` instance:
 
 ```
-myRegulator.withController($("[data-wt='AlertButton']"), function(controller) {
+myRegulator.withController($("[data-wt='alert']"), function(controller) {
   controller.triggerAlert();
 });
 ```
