@@ -36,7 +36,7 @@ Basic Usage
 
 Denote components on your page with `data-rc`, and give them a name that describes how to initialize them:
 
-```javascript
+```html
 <button data-rc="alert">Click me</button>
 ```
 
@@ -59,14 +59,14 @@ module.exports = function(el) {
 
 Now whenever you add an element with `data-rc="alert"` to the DOM, a click listener will be bound:
 
-```
+```javascript
 var content = $.get(someUrl); // Contains an "alert" block
 $('body').append(content); // "alert" block is initialized automatically
 ```
 
 You can access the return value of the initialization function through your `Regulator` instance:
 
-```
+```javascript
 myRegulator.withController($("[data-rc='alert']"), function(controller) {
   controller.triggerAlert();
 });
@@ -77,7 +77,9 @@ API
 
 ##### Creating a `Regulator` instance
 
-`new Regulator(initializer, options = {})`
+```javascript
+var myRegulator = new Regulator(initializer, options = {})
+```
 
 Here `initializer` is a function which takes `(name, el)`, where `name` is the name of a component
 and `el` is its root element. The return value of this function is referred to as the element's _controller_.
@@ -97,17 +99,23 @@ Available options are:
 
 Depending on your use case, you can initialize your components in one of three ways:
 
-`Regulator#initialize(element)`
+```javascript
+myRegulator.initialize(element)
+```
 
 Synchronously invokes the initializer for a single component. If called repeatedly, only invokes the initializer once.
 Returns a `Promise` resolving to the element's controller.
 
-`Regulator#scan()`
+```javascript
+myRegulator.scan()
+```
 
 Synchronously finds and initializes all components which haven't been initialized yet. Returns a promise that resolves
 when all initializations are complete.
 
-`Regulator#observe()`
+```javascript
+myRegulator.observe()
+```
 
 Observes the page for changes, and initializes new components as they're added. If `MutationObserver` is present,
 uses it for relatively performant initialization; otherwise, falls back to `#scan` running repeatedly at the interval
@@ -120,7 +128,9 @@ control, use `#scan` or `#initialize`.
 
 ##### Accessing your controllers
 
-`Regulator#withController(iterable, callback)`
+```javascript
+myRegulator.withController(iterable, callback)
+```
 
 Invokes `callback` with the controller for each component root in `iterable` (`iterable` can also be a single element).
 Also initializes the components if they haven't been already.
