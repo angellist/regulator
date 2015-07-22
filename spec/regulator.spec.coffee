@@ -495,3 +495,7 @@ define [
       it 'does not throw an error if called on a non-observing regulator', ->
         (new Regulator (->)).disconnect()
         expect(true).toBe true # Just want to make sure no error was thrown
+
+      it 'returns the regulator', ->
+        regulator = new Regulator (->)
+        expect(regulator.disconnect()).toBe regulator

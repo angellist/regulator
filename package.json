@@ -5,6 +5,7 @@
   "main": "dist/regulator.js",
   "scripts": {
     "build": "./node_modules/.bin/coffee -c -o dist/ src/",
+    "docs": "./node_modules/.bin/jsdoc -d docs/ dist/regulator.js",
     "preupdate": "npm run build",
     "postupdate": "git push && git push --tags",
     "release": "./node_modules/.bin/mversion",
@@ -25,6 +26,7 @@
     "dotenv": "^1.1.0",
     "es6-promise": "^2.3.0",
     "jasmine-core": "^2.3.4",
+    "jsdoc": "^3.3.2",
     "karma": "^0.12.28",
     "karma-coffee-preprocessor": "^0.2.1",
     "karma-fixture": "^0.2.5",

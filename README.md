@@ -78,10 +78,10 @@ API
 ##### Creating a `Regulator` instance
 
 ```javascript
-var myRegulator = new Regulator(initializer, options = {})
+var myRegulator = new Regulator(strategy, options = {})
 ```
 
-Here `initializer` is a function which takes `(name, el)`, where `name` is the name of a component
+`strategy` is a function which takes `(name, el)`, where `name` is the name of a component
 and `el` is its root element. The return value of this function is referred to as the element's _controller_.
 
 Available options are:

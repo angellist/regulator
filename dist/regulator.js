@@ -45,36 +45,67 @@
         return typeof el[attribute] !== 'undefined';
       }
     };
+
+    /**
+     * @typedef {Object} Regulator.Controller
+     *
+     * @description
+     * An object returned by a {@link Regulator.Strategy} implementation, which becomes associated with a component on the
+     * page. Controllers are accessible any time through {@link Regulator#withController} or {@link Regulator#initialize}.
+     */
+
+    /**
+     * @callback Regulator.Strategy
+     *
+     * @description
+     * An initialization strategy for your components. You're encouraged to structure your application such that the
+     * name uniquely describes how to initialize the component.
+     *
+     * @example
+     * new Regulator(function (name, el) {
+     *   initializer = require('components/' + name);
+     *   return initializer(el);
+     * }).observe();
+     * // Adding "<div data-rc='foo' />" to the DOM would cause this function to be invoked with name "foo".
+     *
+     * @param {String} name The name of the component being initialized, i.e. the value of the <code>data-rc</code>
+     *   attribute.
+     * @param {Element} element The root element of the component being initialized, i.e. the element with a
+     *   <code>data-rc</code> attribute.
+     * @return {Promise|Regulator.Controller} A controller object to associate with the component, which will be globally
+     *   available through the {@link Regulator#initialize} and {@link Regulator#withController} functions. May also
+     *   return a <code>Promise</code> object if you wish to build the controller asynchronously.
+     */
+
+    /**
+     * @callback Regulator.ControllerCallback
+     *
+     * @description
+     * A callback function for {@link Regulator#withController}.
+     *
+     * @param {Regulator.Controller} controller The controller for a component.
+     */
+
+    /**
+     * @class Regulator
+     *
+     * @param {Regulator.Strategy} strategy The function to initialize your components.
+     * @param {Object} [options]
+     * @param {String} [options.attribute='data-rc'] The attribute to denote the root of a component in the DOM.
+     * @param {Number} [options.throttle=200] When observing the DOM for changes with <code>MutationObserver</code>,
+     *   the minimum interval (in milliseconds) between successive scans.
+     * @param {Number} [options.poll=1000] The interval (in milliseconds) to poll the DOM for changes if
+     *   <code>MutationObserver</code> is not available.
+     * @param {Element} [options.root=window.document.body] The root element to scan for components. Elements outside this
+     *   root will be ignored by {@link Regulator#scan} and {@link Regulator#observe}.
+     * @param {Function} [options.Promise=window.Promise] The {@link https://promisesaplus.com/|Promises/A+}
+     *   implementation to use.
+     * @param {Function} [options.MutationObserver=window.MutationObserver] The
+     *   {@link https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver|MutationObserver} implementation to use
+     *   when invoking {@link Regulator#observe}. If no implementation is provided, a polling fallback is used.
+     */
     return Regulator = (function() {
-
-      /**
-       * An initialization function for your components. Components are marked by the presence of a `data-wt` attribute
-       * (or whatever attribute you've configured for your `Regulator` instance), and their name is the value of this
-       * attribute.
-       *
-       * You're encouraged to structure your application such that the name uniquely describes how to initialize the
-       * component.
-       *
-       * @example
-       *   new Regulator(function (name, el) {
-       *     initializer = require('components/' + name);
-       *     return initializer(el);
-       *   }).observe();
-       *   // Adding `<div data-wt='foo' />` to the DOM would cause this function to be invoked with name 'foo'.
-       *
-       * @callback initializeCallback
-       * @param {string} name - The name of the component being initialized, i.e. the value of the data-wt attribute.
-       * @param {Element} el - The root element of the component being initialized, i.e. the element with a data-wt
-       *   attribute.
-       * @return {Promise|object} A controller object for this component, or a promise resolving with that object. This
-       *   controller will be returned (as a promise) from the `initialize` method on your regulator instance, and passed
-       *   to the teardown callback that you specify.
-       */
-
-      /**
-       * @param {initializeCallback} initialize - The function to initialize your components
-       */
-      function Regulator(initialize, options) {
+      function Regulator(strategy, options) {
         var k, v;
         if (options == null) {
           options = {};
@@ -84,7 +115,7 @@
         this.observe = bind(this.observe, this);
         this.scan = bind(this.scan, this);
         this.initialize = bind(this.initialize, this);
-        if (typeof initialize !== 'function') {
+        if (typeof strategy !== 'function') {
           throw new TypeError('invalid initialization function');
         }
         this._options = {
@@ -101,7 +132,7 @@
           this._options[k] = v;
         }
         this._instanceId = regulatorCount++;
-        this._initialize = initialize;
+        this._strategy = strategy;
         if (!isElement(this._options.root)) {
           throw new Error('options.root must be an HTML element (document.body may not be defined yet?)');
         }
@@ -110,22 +141,44 @@
         }
       }
 
-      Regulator.prototype.initialize = function(el) {
+
+      /**
+       * @function Regulator#initialize
+       *
+       * @description
+       * Invoke our {@link Regulator.Strategy} callback to initialize a component.
+       *
+       * @param {Element} element The root of a component on the page. Must have a non-empty <code>data-rc</code>
+       *   attribute (or whatever attribute you specified when creating the {@link Regulator}).
+       * @return {Promise} A promise resolving to the {@link Regulator.Controller} associated with the component.
+       */
+
+      Regulator.prototype.initialize = function(element) {
         var name;
-        if (!hasAttribute(el, this._options.attribute)) {
+        if (!hasAttribute(element, this._options.attribute)) {
           throw new Error("Element must have a " + this._options.attribute + " attribute");
         }
-        el._regulatorControllers || (el._regulatorControllers = {});
-        if (el._regulatorControllers[this._instanceId] == null) {
-          name = el.getAttribute(this._options.attribute);
-          el._regulatorControllers[this._instanceId] = new this._options.Promise((function(_this) {
+        element._regulatorControllers || (element._regulatorControllers = {});
+        if (element._regulatorControllers[this._instanceId] == null) {
+          name = element.getAttribute(this._options.attribute);
+          element._regulatorControllers[this._instanceId] = new this._options.Promise((function(_this) {
             return function(resolve) {
-              return resolve(_this._initialize(name, el));
+              return resolve(_this._strategy(name, element));
             };
           })(this));
         }
-        return el._regulatorControllers[this._instanceId];
+        return element._regulatorControllers[this._instanceId];
       };
+
+
+      /**
+       * @function Regulator#scan
+       *
+       * @description
+       * Immediately initialize any uninitialized components on the page.
+       *
+       * @return {Promise} A promise which resolves when all components have been initialized.
+       */
 
       Regulator.prototype.scan = function() {
         var el;
@@ -140,6 +193,16 @@
           return results;
         }).call(this));
       };
+
+
+      /**
+       * @function Regulator#observe
+       *
+       * @description
+       * Watch the page for changes, and initialize components as they're added.
+       *
+       * @return {Regulator} This {@link Regulator} instance.
+       */
 
       Regulator.prototype.observe = function() {
         var handleMutation, throttledScan;
@@ -232,6 +295,18 @@
         return this;
       };
 
+
+      /**
+       * @function Regulator#withController
+       *
+       * @description
+       * Initialize the given components, and invoke the callback with each of their
+       *   {@link Regulator.Controller|controllers}.
+       *
+       * @param {Element|Element[]} elements The root element(s) of the component(s) to be initialized.
+       * @param {Regulator.ControllerCallback} callback The callback to invoke with the controller for each element.
+       */
+
       Regulator.prototype.withController = function(elements, callback) {
         var el;
         if (isElement(elements)) {
@@ -248,6 +323,16 @@
         }).call(this));
       };
 
+
+      /**
+       * @function Regulator#disconnect
+       *
+       * @description
+       * Stop watching the page for changes after a call to {@link Regulator#observe}.
+       *
+       * @return {Regulator} This {@link Regulator} instance.
+       */
+
       Regulator.prototype.disconnect = function() {
         var ref;
         if ((ref = this._observer) != null) {
@@ -256,8 +341,9 @@
         this._observer = void 0;
         if (this._interval) {
           clearInterval(this._interval);
-          return this._interval = void 0;
+          this._interval = void 0;
         }
+        return this;
       };
 
       return Regulator;
