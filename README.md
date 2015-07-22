@@ -9,8 +9,8 @@ Regulator is a tiny, opinionless tool for structuring your Javascript applicatio
 Regulator weighs about 1.2KB (compressed). It requires a [Promises/A+](https://promisesaplus.com/) implementation.
 It also optionally makes use of `MutationObserver` for reacting to changes in the DOM.
 
-```
-bower install regulator
+```bash
+$ bower install regulator
 ```
 
 Motivation
@@ -34,21 +34,21 @@ each other. Perfect for loosely coupled applications at any scale, using any too
 Basic Usage
 -----------
 
-Denote components on your page with `data-wt`, and give them a name that describes how to initialize them:
+Denote components on your page with `data-rc`, and give them a name that describes how to initialize them:
 
-```
-<button data-wt="alert">Click me</button>
+```javascript
+<button data-rc="alert">Click me</button>
 ```
 
 Create a `Regulator` instance and tell it how to initialize your components:
 
-```
+```javascript
 var myRegulator = new Regulator(function(name, el) {
   return require('initializers/' + name)(el);
 }).observe();
 ```
 
-```
+```javascript
 // initializers/alert.js
 module.exports = function(el) {
   var triggerAlert = function() { alert('clicked!') };
@@ -57,7 +57,7 @@ module.exports = function(el) {
 };
 ```
 
-Now whenever you add an element with `data-wt="alert"` to the DOM, a click listener will be bound:
+Now whenever you add an element with `data-rc="alert"` to the DOM, a click listener will be bound:
 
 ```
 var content = $.get(someUrl); // Contains an "alert" block
@@ -67,7 +67,7 @@ $('body').append(content); // "alert" block is initialized automatically
 You can access the return value of the initialization function through your `Regulator` instance:
 
 ```
-myRegulator.withController($("[data-wt='alert']"), function(controller) {
+myRegulator.withController($("[data-rc='alert']"), function(controller) {
   controller.triggerAlert();
 });
 ```
@@ -84,7 +84,7 @@ and `el` is its root element. The return value of this function is referred to a
 
 Available options are:
 
-- `attribute`: The HTML attribute which denotes a component. _Default: `'data-wt'`
+- `attribute`: The HTML attribute which denotes a component. _Default: `'data-rc'`_
 - `throttle`: When observing with a `MutationObserver`, the maximum frequency (in milliseconds) to call
   `#scan()`. _Default: `200`_
 - `poll`: When observing in the absence of a `MutationObserver`, the interval to poll the DOM for changes.
@@ -127,7 +127,7 @@ Also initializes the components if they haven't been already.
 
 Controllers can also be accessed through the return value of `#initialize`:
  
-```
+```javascript
 myRegulator.initialize(el).then(function(controller) {
   // ...
 });
@@ -139,7 +139,7 @@ Testing
 Run tests using [karma](https://karma-runner.github.io):
 
 
-```
+```bash
 $ npm install
 $ node_modules/bin/karma start
 ```
