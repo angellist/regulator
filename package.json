@@ -1,6 +1,6 @@
 {
   "name": "regulator",
-  "version": "0.10.0",
+  "version": "1.0.0",
   "description": "A tiny, opinionless tool for structuring your Javascript applications",
   "main": "dist/regulator.js",
   "scripts": {
@@ -33,7 +33,7 @@
     "karma-jasmine": "^0.3.3",
     "karma-requirejs": "^0.2.2",
     "karma-sauce-launcher": "^0.2.11",
-    "mversion": "^1.9.0",
+    "mversion": "^1.10.1",
     "requirejs": "^2.1.18"
   }
 }
